@@ -3,6 +3,7 @@ package cli
 import (
 	_ "embed"
 	"fmt"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -81,7 +82,11 @@ func (mg *MigrationGenerator) BumpVersion() *MigrationGenerator {
 }
 
 func (mg *MigrationGenerator) GetPackagePath() string {
-	return "cmd/migrations"
+	path := "cmd/migrations"
+	if dir := os.Getenv("MIGRATIONS_DIR"); dir != "" {
+		path = dir
+	}
+	return path
 }
 
 func (mg *MigrationGenerator) GetStub() string {
