@@ -70,8 +70,8 @@ templ {{.Name}}() {
         <label for="{{.Name | toSnake}}" class="label-primary">{{.Name | toSpaceDelimited | toTitle}}</label>
         <input id="{{.Name | toSnake}}" name="{{.Name | toSnake}}" type="datetime-local" class="input"/>
         {{- end}}
-        {{- if eq .Type "image"}}
-        <label for="{{.Name | toSnake}}" class="label-primary">{{.Name | toSpaceDelimited | toTitle}}</label>
+        {{- if eq .Type "file"}}
+        <label for="{{.Name | toSnake}}" className="label-primary">{{.Name | toSpaceDelimited | toTitle}}</label>
         <input id="{{.Name | toSnake}}" name="{{.Name | toSnake}}" type="file"/>
         {{- end}}
       </div>
