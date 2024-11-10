@@ -78,7 +78,7 @@ templ {{.Name}}(data res.TemplateData) {
         <label for="{{.Name | toSnake}}" class="label-primary">{{.Name | toSpaceDelimited | toTitle}}</label>
         <input id="{{.Name | toSnake}}" name="{{.Name | toSnake}}" type="file"/>
         {{- end}}
-        if len(data.ValidationErrors) > 0 && data.ValidationErrors["{{.Name | toSnake}}"][0] != "" {
+        if len(data.ValidationErrors) > 0 && len(data.ValidationErrors["{{.Name | toSnake}}"]) > 0 && data.ValidationErrors["{{.Name | toSnake}}"][0] != "" {
         <p class="text-xs text-red-500">{data.ValidationErrors["{{.Name | toSnake}}"][0]}</p>
         }
       </div>
