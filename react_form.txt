@@ -7,6 +7,8 @@ const {{.Name}}: React.FC = () => {
   {{- range .Fields}}
     {{- if eq .Type "file"}}
     {{.Name | toSnake}}: undefined,
+    {{- else if eq .Type "boolean"}}
+    {{.Name | toSnake}}: false,
     {{- else}}
     {{.Name | toSnake}}: "",
     {{- end}}
@@ -19,6 +21,11 @@ const {{.Name}}: React.FC = () => {
     if ("files" in e.target && e.target.files && e.target.files.length > 0) {
       setData(e.target.name, e.target.files[0]);
       return;
+    }
+
+    if (e.target instanceof HTMLInputElement && e.target.type == "checkbox") {
+        setData(e.target.name, e.target.checked)
+        return
     }
 
     setData(e.target.name, e.target.value);
