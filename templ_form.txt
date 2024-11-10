@@ -1,6 +1,10 @@
 package {{.PackageName}}
 
-templ {{.Name}}() {
+import (
+    "github.com/lemmego/api/res"
+)
+
+templ {{.Name}}(data res.TemplateData) {
   <div class="w-1/3 mx-auto">
   <h1 class="text-3xl text-center">{{.Name | toTitle}}</h1>
   <form action="{{.Route}}" method="POST" enctype="multipart/form-data">
@@ -74,6 +78,9 @@ templ {{.Name}}() {
         <label for="{{.Name | toSnake}}" class="label-primary">{{.Name | toSpaceDelimited | toTitle}}</label>
         <input id="{{.Name | toSnake}}" name="{{.Name | toSnake}}" type="file"/>
         {{- end}}
+        if len(data.ValidationErrors) > 0 && data.ValidationErrors["{{.Name | toSnake}}"][0] != "" {
+        <p class="text-xs text-red-500">{data.ValidationErrors["{{.Name | toSnake}}"][0]}</p>
+        }
       </div>
     {{end}}
     <div>
