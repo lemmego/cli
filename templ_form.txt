@@ -33,7 +33,7 @@ templ {{.Name}}(data res.TemplateData) {
         <input id="{{.Name | toSnake}}" name="{{.Name | toSnake}}" type="number" min="0.0" class="input"/>
         {{- end}}
         {{- if eq .Type "boolean"}}
-        <input id="{{.Name | toSnake}}" name="{{.Name | toSnake}}" type="checkbox" class="mr-2"/>
+        <input id="{{.Name | toSnake}}" name="{{.Name | toSnake}}" type="checkbox" class="mr-2" onclick="(function(){var node = document.getElementsByName('{{.Name | toSnake}}')[0]; node.value = node.checked;})()" />
         <label for="{{.Name | toSnake}}">{{.Name | toSpaceDelimited | toTitle}}</label>
         {{- end}}
         {{- if eq .Type "radio"}}

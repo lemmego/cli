@@ -23,11 +23,6 @@ const {{.Name}}: React.FC = () => {
       return;
     }
 
-    if (e.target instanceof HTMLInputElement && e.target.type == "checkbox") {
-        setData(e.target.name, e.target.checked)
-        return
-    }
-
     setData(e.target.name, e.target.value);
   }
 
