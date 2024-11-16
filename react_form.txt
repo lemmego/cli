@@ -121,3 +121,4 @@ const {{.Name}}: React.FC = () => {
 
 export default {{.Name}};
 
+{{.Appendable}}

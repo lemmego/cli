@@ -24,3 +24,5 @@ type {{.ModelName | toCamel}} struct {
     {{- end}}
 {{- end}}
 }
+
+{{.Appendable}}

@@ -40,7 +40,7 @@ func (hg *HandlerGenerator) GetStub() string {
 	return handlerStub
 }
 
-func (hg *HandlerGenerator) Generate() error {
+func (hg *HandlerGenerator) Generate(appendable ...[]byte) error {
 	fs := fsys.NewLocalStorage("")
 	parts := strings.Split(hg.GetPackagePath(), "/")
 	packageName := hg.GetPackagePath()
@@ -52,6 +52,10 @@ func (hg *HandlerGenerator) Generate() error {
 	tmplData := map[string]interface{}{
 		"PackageName": packageName,
 		"Name":        hg.name,
+	}
+
+	if len(appendable) > 0 {
+		tmplData["Appendable"] = appendable[0]
 	}
 
 	output, err := ParseTemplate(tmplData, hg.GetStub(), commonFuncs)

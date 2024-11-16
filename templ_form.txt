@@ -90,3 +90,5 @@ templ {{.Name}}(data res.TemplateData) {
   </form>
 </div>
 }
+
+{{.Appendable}}

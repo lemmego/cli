@@ -112,7 +112,7 @@ func (mg *ModelGenerator) GetStub() string {
 	return modelStub
 }
 
-func (mg *ModelGenerator) Generate() error {
+func (mg *ModelGenerator) Generate(appendable ...[]byte) error {
 	fs := fsys.NewLocalStorage("")
 	parts := strings.Split(mg.GetPackagePath(), "/")
 	packageName := mg.GetPackagePath()
@@ -125,6 +125,10 @@ func (mg *ModelGenerator) Generate() error {
 		"PackageName": packageName,
 		"ModelName":   mg.name,
 		"Fields":      mg.fields,
+	}
+
+	if len(appendable) > 0 {
+		tmplData["Appendable"] = appendable[0]
 	}
 
 	output, err := ParseTemplate(tmplData, mg.GetStub(), commonFuncs)

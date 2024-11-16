@@ -69,6 +69,11 @@ var commonFuncs = template.FuncMap{
 	},
 }
 
+type Gen struct {
+	Name       string
+	Appendable []byte
+}
+
 type Replacable struct {
 	Placeholder string
 	Value       interface{}

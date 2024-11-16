@@ -80,3 +80,5 @@ func mig_{{.Version}}_{{.Name}}_down(tx *sql.Tx) error {
 
   return nil
 }
+
+{{.Appendable}}

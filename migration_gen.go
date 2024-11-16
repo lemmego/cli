@@ -93,7 +93,7 @@ func (mg *MigrationGenerator) GetStub() string {
 	return migrationStub
 }
 
-func (mg *MigrationGenerator) Generate() error {
+func (mg *MigrationGenerator) Generate(appendable ...[]byte) error {
 	fs := fsys.NewLocalStorage("")
 	parts := strings.Split(mg.GetPackagePath(), "/")
 	packageName := mg.GetPackagePath()
@@ -112,6 +112,10 @@ func (mg *MigrationGenerator) Generate() error {
 		"UniqueColumns":  mg.uniqueColumns,
 		"ForeignColumns": mg.foreignColumns,
 		"Timestamps":     mg.Timestamps,
+	}
+
+	if len(appendable) > 0 {
+		tmplData["Appendable"] = appendable[0]
 	}
 
 	output, err := ParseTemplate(tmplData, mg.GetStub(), commonFuncs)

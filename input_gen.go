@@ -49,7 +49,7 @@ func (ig *InputGenerator) GetStub() string {
 	return inputStub
 }
 
-func (ig *InputGenerator) Generate() error {
+func (ig *InputGenerator) Generate(appendable ...[]byte) error {
 	fs := fsys.NewLocalStorage("")
 	parts := strings.Split(ig.GetPackagePath(), "/")
 	packageName := ig.GetPackagePath()
@@ -62,6 +62,10 @@ func (ig *InputGenerator) Generate() error {
 		"PackageName": packageName,
 		"InputName":   ig.name,
 		"Fields":      ig.fields,
+	}
+
+	if len(appendable) > 0 {
+		tmplData["Appendable"] = appendable[0]
 	}
 
 	output, err := ParseTemplate(tmplData, ig.GetStub(), commonFuncs)

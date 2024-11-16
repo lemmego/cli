@@ -33,3 +33,5 @@ func (i *{{.InputName | toCamel}}Input) Validate() error {
     {{- end}}
 	return i.Validator.Validate()
 }
+
+{{.Appendable}}

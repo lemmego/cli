@@ -30,3 +30,4 @@ func {{.Name | toCamel}}DeleteHandler(ctx *app.Context) error {
   return nil
 }
 
+{{.Appendable}}

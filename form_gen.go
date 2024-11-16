@@ -73,7 +73,7 @@ func (fg *FormGenerator) GetStub() string {
 	return ""
 }
 
-func (fg *FormGenerator) Generate() error {
+func (fg *FormGenerator) Generate(appendable ...[]byte) error {
 	fs := fsys.NewLocalStorage("")
 	parts := strings.Split(fg.GetPackagePath(), "/")
 	packageName := fg.GetPackagePath()
@@ -84,6 +84,10 @@ func (fg *FormGenerator) Generate() error {
 
 	tmplData := map[string]interface{}{
 		"PackageName": packageName,
+	}
+
+	if len(appendable) > 0 {
+		tmplData["Appendable"] = appendable[0]
 	}
 
 	for _, v := range fg.GetReplacables() {
