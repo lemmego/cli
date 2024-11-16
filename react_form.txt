@@ -23,6 +23,11 @@ const {{.Name}}: React.FC = () => {
       return;
     }
 
+	if (typeof data[e.target.name] == "boolean") {
+		setData(e.target.name, !!e.target.value)
+		return
+	}
+
     setData(e.target.name, e.target.value);
   }
 
