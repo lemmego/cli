@@ -128,7 +128,7 @@ func (mg *ModelGenerator) Generate(appendable ...[]byte) error {
 	}
 
 	if len(appendable) > 0 {
-		tmplData["Appendable"] = appendable[0]
+		tmplData["Appendable"] = string(appendable[0])
 	}
 
 	output, err := ParseTemplate(tmplData, mg.GetStub(), commonFuncs)

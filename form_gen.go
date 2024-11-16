@@ -87,7 +87,7 @@ func (fg *FormGenerator) Generate(appendable ...[]byte) error {
 	}
 
 	if len(appendable) > 0 {
-		tmplData["Appendable"] = appendable[0]
+		tmplData["Appendable"] = string(appendable[0])
 	}
 
 	for _, v := range fg.GetReplacables() {
