@@ -7,12 +7,11 @@ Lemmego CLI is used for generating the framework components.
 ### For Linux & macOS Users
 
   ```sh
-  curl -LJO "https://github.com/lemmego/cli/releases/download/v0.1.1/installer.sh" | sh
+curl -fsSL https://raw.githubusercontent.com/lemmego/cli/refs/heads/main/installer.sh | sudo sh
   ```
 
 
 ## Usage
-
 
 ### Create a new project:
 
