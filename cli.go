@@ -14,13 +14,13 @@ import (
 const repoURL = "https://github.com/lemmego/lemmego"
 
 var newCmd = &cobra.Command{
-	Use:     "new [module-name]",
+	Use:     "new [dirname]",
 	Aliases: []string{"n"},
 	Short:   "Create an app",
 	Long:    `Create a new Lemmego app`,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
-		newModuleName := args[0]
+		dirname := args[0]
 
 		// Check if git is installed
 		if _, err := exec.LookPath("git"); err != nil {
@@ -28,16 +28,38 @@ var newCmd = &cobra.Command{
 			return
 		}
 
-		// Check if the current directory is empty
-		dir, _ := os.Getwd()
-		files, _ := filepath.Glob(filepath.Join(dir, "*"))
-		if len(files) > 0 {
-			fmt.Println("Error: The current directory must be empty to create a new project.")
+		// Get current working directory
+		currentDir, _ := os.Getwd()
+		dirPath := filepath.Join(currentDir, dirname)
+
+		// Check if directory exists
+		if _, err := os.Stat(dirPath); os.IsNotExist(err) {
+			// If directory doesn't exist, create it
+			fmt.Printf("> Creating new directory: %s\n", dirname)
+			if err := os.MkdirAll(dirPath, 0755); err != nil {
+				fmt.Println("Error creating directory:", err)
+				return
+			}
+		} else {
+			// Directory exists, check if it's empty
+			files, _ := filepath.Glob(filepath.Join(dirPath, "*"))
+			if len(files) > 0 {
+				fmt.Println("Error: The directory must be empty to create a new project.")
+				return
+			}
+		}
+
+		// Prompt for module name
+		fmt.Print("Enter the module name: ")
+		var newModuleName string
+		_, err := fmt.Scanln(&newModuleName)
+		if err != nil {
+			fmt.Println("Error reading module name:", err)
 			return
 		}
 
-		fmt.Println("> Cloning repository...")
-		_, err := git.PlainClone(dir, false, &git.CloneOptions{
+		fmt.Println("> Downloading starter template...")
+		_, err = git.PlainClone(dirPath, false, &git.CloneOptions{
 			URL:      repoURL,
 			Progress: os.Stdout,
 		})
@@ -47,7 +69,7 @@ var newCmd = &cobra.Command{
 		}
 
 		fmt.Println("> Creating a new project, please wait...")
-		err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		err = filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
 			}
@@ -68,12 +90,44 @@ var newCmd = &cobra.Command{
 			return
 		}
 
+		// Copy .env.example to .env
+		sourceFile := filepath.Join(dirPath, ".env.example")
+		destFile := filepath.Join(dirPath, ".env")
+		if _, err := os.Stat(sourceFile); err == nil {
+			fmt.Println("> Copying .env.example to .env")
+			if err := copyFile(sourceFile, destFile); err != nil {
+				fmt.Println("Warning: Could not copy .env.example to .env:", err)
+			}
+		} else if !os.IsNotExist(err) {
+			fmt.Println("Warning: Error checking for .env.example file:", err)
+		}
+
 		// Remove .git directory
 		fmt.Println("> Cleaning up repository metadata...")
-		if err := os.RemoveAll(filepath.Join(dir, ".git")); err != nil {
+		if err := os.RemoveAll(filepath.Join(dirPath, ".git")); err != nil {
 			fmt.Println("Warning: Unable to remove .git directory:", err)
 		}
 
-		fmt.Println("\nSuccessfully created a new Lemmego app with module name:", newModuleName)
+		fmt.Println("\nSuccessfully created a new Lemmego app with module name:", newModuleName, "in directory:", dirname)
+		fmt.Println("> To navigate to your new project, please run:")
+		fmt.Println("cd", dirname)
 	},
+}
+
+// Helper function to copy a file
+func copyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = destination.ReadFrom(source)
+	return err
 }
