@@ -13,9 +13,8 @@ var shouldRunInteractively = false
 // hold all the subcommands such as gen, or any package-level
 // commands installed via service providers.
 var rootCmd = &cobra.Command{
-	Use:     "lemmego",
-	Aliases: []string{"lmg"},
-	Short:   fmt.Sprintf("%s", os.Getenv("APP_NAME")),
+	Use:   "",
+	Short: fmt.Sprintf("%s", os.Getenv("APP_NAME")),
 }
 
 // AddCmd adds a new sub-command to the root command.
