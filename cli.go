@@ -17,7 +17,7 @@ var newCmd = &cobra.Command{
 	Use:     "new [module-name]",
 	Aliases: []string{"n"},
 	Short:   "Create an app",
-	Long:    `Create a new Lemmego app by cloning the repository and replacing the module name`,
+	Long:    `Create a new Lemmego app`,
 	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		newModuleName := args[0]
@@ -46,7 +46,7 @@ var newCmd = &cobra.Command{
 			return
 		}
 
-		fmt.Println("> Replacing module name in .go, .templ, and go.mod files...")
+		fmt.Println("> Creating a new project, please wait...")
 		err = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -60,7 +60,6 @@ var newCmd = &cobra.Command{
 				if err = os.WriteFile(path, []byte(newContent), 0644); err != nil {
 					return err
 				}
-				fmt.Printf("  - Updated: %s\n", path)
 			}
 			return nil
 		})
@@ -77,8 +76,4 @@ var newCmd = &cobra.Command{
 
 		fmt.Println("\nSuccessfully created a new Lemmego app with module name:", newModuleName)
 	},
-}
-
-func init() {
-	rootCmd.AddCommand(newCmd)
 }
