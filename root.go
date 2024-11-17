@@ -33,6 +33,7 @@ func Execute() error {
 	genCmd.AddCommand(inputCmd)
 	genCmd.AddCommand(formCmd)
 
+	AddCmd(newCmd)
 	AddCmd(genCmd)
 
 	return rootCmd.Execute()
