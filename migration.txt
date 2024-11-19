@@ -47,22 +47,21 @@ func mig_{{.Version}}_{{.Name}}_up(tx *sql.Tx) error {
     {{$fieldLine}}
 {{- end}}
 
-    {{- if gt (len .PrimaryColumns) 0}}
-    {{- $pkLine := "t.PrimaryKey("}}
-    {{- range $i, $column := .PrimaryColumns}}
-        {{- if $i -}}, {{end -}}
-        {{- printf "\"%s\"" $column -}}
-    {{- end -}}
-    {{- $pkLine = printf "%s)" $pkLine}}
-    {{$pkLine}}
-    {{- end}}
+{{- if gt (len .PrimaryColumns) 0}}
+    t.PrimaryKey(
+        {{- range $index, $column := .PrimaryColumns}}
+            {{- if $index -}}, {{- end -}}
+            {{- printf "\"%s\"" $column -}}
+        {{- end}})
+{{- end}}
 
 {{- range $i, $fcs := .ForeignColumns}}
     {{- if gt (len $fcs) 0}}
-    {{- $fkLine := "t.Foreign(\""}}
-    {{- $fkLine = concat $fkLine (join $fcs ", ")}}
-    {{- $fkLine = concat $fkLine "\")"}}
-    {{$fkLine}}
+    t.Foreign(
+        {{- range $j, $fc := $fcs}}
+            {{- if $j -}}, {{- end -}}
+            {{printf "\"%s\"" $fc}}
+        {{- end}})
     {{- end}}
 {{- end}}
   }).Build()
