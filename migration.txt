@@ -48,13 +48,12 @@ func mig_{{.Version}}_{{.Name}}_up(tx *sql.Tx) error {
 {{- end}}
 
     {{- if gt (len .PrimaryColumns) 0}}
-    {{- $pkLine := "t.PrimaryKey("}}
-    {{- range $i, $column := .PrimaryColumns}}
-        {{- if $i -}}, {{end -}}
+    t.PrimaryKey(
+      {{- range $i, $column := .PrimaryColumns}}
+        {{- if ne $i 0 -}}, {{- end -}}
         {{- printf "\"%s\"" $column -}}
-    {{- end -}}
-    {{- $pkLine = printf "%s)" $pkLine}}
-    {{$pkLine}}
+      {{- end}}
+    )
     {{- end}}
 
 {{- range $i, $fcs := .ForeignColumns}}
