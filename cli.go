@@ -94,7 +94,7 @@ var newCmd = &cobra.Command{
 		sourceFile := filepath.Join(dirPath, ".env.example")
 		destFile := filepath.Join(dirPath, ".env")
 		if _, err := os.Stat(sourceFile); err == nil {
-			fmt.Println("> Copying .env.example to .env")
+			fmt.Println("> Copying .env.example to .env...")
 			if err := copyFile(sourceFile, destFile); err != nil {
 				fmt.Println("Warning: Could not copy .env.example to .env:", err)
 			}
@@ -109,8 +109,9 @@ var newCmd = &cobra.Command{
 		}
 
 		fmt.Println("\nSuccessfully created a new Lemmego app with module name:", newModuleName, "in directory:", dirname)
-		fmt.Println("> To navigate to your new project, please run:")
+		fmt.Println("> Navigate to your new project, update the .env file and run:")
 		fmt.Println("cd", dirname)
+		fmt.Println("go run ./cmd/app")
 	},
 }
 
