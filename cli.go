@@ -108,8 +108,26 @@ var newCmd = &cobra.Command{
 			fmt.Println("Warning: Unable to remove .git directory:", err)
 		}
 
+		// Create SQLite database file
+		storageDir := filepath.Join(dirPath, "storage")
+		databaseFile := filepath.Join(storageDir, "database.sqlite")
+
+		// Ensure storage directory exists
+		if err := os.MkdirAll(storageDir, 0755); err != nil {
+			fmt.Println("Warning: Could not create storage directory:", err)
+		} else {
+			// Create the database file
+			dbFile, err := os.Create(databaseFile)
+			if err != nil {
+				fmt.Println("Warning: Could not create SQLite database file:", err)
+			} else {
+				dbFile.Close() // Ensure the file is closed after creation
+				fmt.Println("> Creating SQLite db in ./storage/database.sqlite")
+			}
+		}
+
 		fmt.Println("\nSuccessfully created a new Lemmego app with module name:", newModuleName, "in directory:", dirname)
-		fmt.Println("> Navigate to your new project, update the .env file and run:")
+		fmt.Println("> Navigate to your new project, update the .env file, and run:")
 		fmt.Println("cd", dirname)
 		fmt.Println("go run ./cmd/app")
 	},
