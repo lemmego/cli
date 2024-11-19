@@ -2,6 +2,8 @@ module github.com/lemmego/cli
 
 go 1.22.4
 
+toolchain go1.23.2
+
 require (
 	github.com/charmbracelet/huh v0.6.0
 	github.com/gertd/go-pluralize v0.2.1
