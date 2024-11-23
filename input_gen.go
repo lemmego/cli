@@ -20,11 +20,12 @@ var inputFieldTypes = []string{
 }
 
 type InputField struct {
-	Name     string
-	Type     string
-	Required bool
-	Unique   bool
-	Table    string
+	Name         string
+	Type         string
+	Required     bool
+	Unique       bool
+	Table        string
+	WhereClauses []map[string]interface{}
 }
 
 type InputConfig struct {

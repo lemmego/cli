@@ -55,6 +55,16 @@ func mig_{{.Version}}_{{.Name}}_up(tx *sql.Tx) error {
         {{- end}})
 {{- end}}
 
+{{- range $i, $ucs := .UniqueColumns}}
+    {{- if gt (len $ucs) 0}}
+    t.UniqueKey(
+        {{- range $j, $uc := $ucs}}
+            {{- if $j -}}, {{- end -}}
+            {{printf "\"%s\"" $uc}}
+        {{- end}})
+    {{- end}}
+{{- end}}
+
 {{- range $i, $fcs := .ForeignColumns}}
     {{- if gt (len $fcs) 0}}
     t.Foreign(
