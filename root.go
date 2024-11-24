@@ -15,7 +15,7 @@ var shouldRunInteractively = false
 var rootCmd = &cobra.Command{
 	Use:     "",
 	Short:   fmt.Sprintf("%s", os.Getenv("APP_NAME")),
-	Version: "0.1.10",
+	Version: "0.1.11",
 }
 
 // AddCmd adds a new sub-command to the root command.
