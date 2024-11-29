@@ -37,8 +37,8 @@ const {{.Name}}: React.FC = () => {
   }
 
 	return (
-       <div class="bg-gray-100 flex items-center justify-center h-screen">
-         <div class="bg-white p-8 rounded-lg shadow-lg w-96">
+       <div className="bg-gray-100 flex items-center justify-center h-screen">
+         <div className="bg-white p-8 rounded-lg shadow-lg w-2/6 min-w-96">
 			<h1 className="text-3xl text-center">{{.Name | toSpaceDelimited | toTitle}}</h1>
             {message && <p className="text-blue-500 text-center">{message}</p>}
 			<form onSubmit={submit}>
