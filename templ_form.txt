@@ -5,8 +5,8 @@ import (
 )
 
 templ {{.Name}}(data res.TemplateData) {
-<div class="bg-gray-100 flex items-center justify-center h-screen">
- <div class="bg-white p-8 rounded-lg shadow-lg w-2/6 min-w-96">
+<div class="bg-gray-100 flex flex-col items-center justify-center min-h-screen">
+  <div class="bg-white p-8 rounded-lg shadow-lg w-2/6 min-w-96 max-h-full overflow-y-auto">
   <h1 class="text-3xl text-center">{{.Name | toTitle}}</h1>
   <form action="{{.Route}}" method="POST" enctype="multipart/form-data">
     @csrf()

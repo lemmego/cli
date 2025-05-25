@@ -1,26 +1,26 @@
 package {{.PackageName}}
 
-import (
-	"github.com/lemmego/api/db"
-)
-
 type {{.ModelName | toCamel}} struct {
-	db.Model
 {{- range .Fields}}
-    {{- $gormTag := ""}}
-    {{- if .Unique}}
-        {{- $gormTag = concat $gormTag "unique"}}
+    {{- $fieldTag := ""}}
+    {{- $relTag := ""}}
+    {{- if .Primary}}
+        {{- $fieldTag = concat $fieldTag "pk"}}
     {{- end}}
-    {{- if and .Unique .Required}}
-        {{- $gormTag = concat $gormTag " "}}
-    {{- end}}
-    {{- if .Required}}
-        {{- $gormTag = concat $gormTag "not null"}}
-    {{- end}}
-    {{- if eq $gormTag ""}}
-    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}"`
+    {{- if eq .Relation ""}}
+        {{- if eq $fieldTag ""}}
+    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" db:"{{.Name | toSnake}}"`
+        {{- else}}
+    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" db:"{{.Name | toSnake}}" fieldtag:"{{$fieldTag}}"`
+        {{- end}}
     {{- else}}
-    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" gorm:"{{$gormTag}}"`
+        {{- $relTag = .Relation}}
+        {{- if eq $fieldTag ""}}
+            {{- $fieldTag = concat $fieldTag "rel"}}
+        {{- else}}
+            {{- $fieldTag = concat $fieldTag "," "rel"}}
+        {{- end}}
+    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" rel:"{{$relTag}}" fieldtag:"{{$fieldTag}}"`
     {{- end}}
 {{- end}}
 }

@@ -53,9 +53,11 @@ var commonFuncs = template.FuncMap{
 		return caser.String(str)
 	},
 	"toCamel": func(str string) string {
+		strcase.ConfigureAcronym("id", "ID")
 		return strcase.ToCamel(str)
 	},
 	"toLowerCamel": func(str string) string {
+		strcase.ConfigureAcronym("id", "ID")
 		return strcase.ToLowerCamel(str)
 	},
 	"toSnake": func(str string) string {

@@ -16,33 +16,45 @@ import (
 var modelStub string
 
 var modelFieldTypes = []string{
-	"int", "uint", "int64", "uint64", "float64", "string", "bool", "time.Time", "custom",
+	"int", "uint", "int64", "uint64", "float64", "string", "bool", "time.Time", "relation", "custom",
+}
+
+var modelRelations = []string{
+	RelationOneToOne,
+	RelationOneToMany,
+	RelationManyToOne,
+	RelationManyToMany,
+}
+
+var CommonModelFields = []*ModelField{
+	{
+		Name:     "id",
+		Type:     "uint64",
+		Required: true,
+		Primary:  true,
+	},
+	{
+		Name:     "created_at",
+		Type:     "time.Time",
+		Required: true,
+	},
+	{
+		Name:     "updated_at",
+		Type:     "time.Time",
+		Required: true,
+	},
+	{
+		Name:     "deleted_at",
+		Type:     "time.Time",
+		Required: true,
+	},
 }
 
 const (
-	TagColumn                 = "column"
-	TagType                   = "type"
-	TagSerializer             = "serializer"
-	TagSize                   = "size"
-	TagPrimaryKey             = "primaryKey"
-	TagUnique                 = "unique"
-	TagDefault                = "default"
-	TagPrecision              = "precision"
-	TagScale                  = "scale"
-	TagNotNull                = "not null"
-	TagAutoIncrement          = "autoIncrement"
-	TagAutoIncrementIncrement = "autoIncrementIncrement"
-	TagEmbedded               = "embedded"
-	TagEmbeddedPrefix         = "embeddedPrefix"
-	TagAutoCreateTime         = "autoCreateTime"
-	TagAutoUpdateTime         = "autoUpdateTime"
-	TagIndex                  = "index"
-	TagUniqueIndex            = "uniqueIndex"
-	TagCheck                  = "check"
-	TagWritePerm              = "<-"
-	TagReadPerm               = "->"
-	TagIgnore                 = "-"
-	TagComment                = "comment"
+	RelationOneToOne   = "one_to_one"
+	RelationOneToMany  = "one_to_many"
+	RelationManyToOne  = "many_to_one"
+	RelationManyToMany = "many_to_many"
 )
 
 type ModelField struct {
@@ -52,6 +64,7 @@ type ModelField struct {
 	Unique             bool
 	Primary            bool
 	ForeignConstrained bool
+	Relation           string
 }
 
 type ModelConfig struct {
@@ -91,7 +104,7 @@ func (mtb *DBTagBuilder) Build() string {
 		if t.Argument != "" {
 			tagStrs = append(tagStrs, fmt.Sprintf(`%s:%s`, t.Name, t.Argument))
 		} else {
-			tagStrs = append(tagStrs, fmt.Sprintf(`%s`, t.Name))
+			tagStrs = append(tagStrs, t.Name)
 		}
 	}
 	if len(tagStrs) == 0 {
@@ -167,6 +180,8 @@ var modelCmd = &cobra.Command{
 		var modelName string
 		var fields []*ModelField
 
+		fields = append(fields, CommonModelFields...)
+
 		if !shouldRunInteractively && len(args) == 0 {
 			fmt.Println("Please provide a model name")
 			return
@@ -187,9 +202,10 @@ var modelCmd = &cobra.Command{
 			}
 
 			for {
-				var fieldName, fieldType string
+				var fieldName, fieldType, relation string
 				const required = "Required"
 				const unique = "Unique"
+				const primary = "Primary"
 				selectedAttrs := []string{}
 
 				fieldNameForm := huh.NewForm(
@@ -227,6 +243,21 @@ var modelCmd = &cobra.Command{
 					return
 				}
 
+				if fieldType == "relation" {
+					relationForm := huh.NewForm(
+						huh.NewGroup(
+							huh.NewSelect[string]().
+								Title("Enter the relation type").
+								Options(huh.NewOptions(modelRelations...)...).
+								Value(&relation),
+						),
+					)
+					err = relationForm.Run()
+					if err != nil {
+						return
+					}
+				}
+
 				if fieldType == "custom" {
 					fieldTypeForm := huh.NewForm(
 						huh.NewGroup(
@@ -241,17 +272,19 @@ var modelCmd = &cobra.Command{
 					}
 				}
 
-				selectedAttrsForm := huh.NewForm(
-					huh.NewGroup(
-						huh.NewMultiSelect[string]().
-							Title("Press x to select the attributes").
-							Options(huh.NewOptions(required, unique)...).
-							Value(&selectedAttrs),
-					),
-				)
-				err = selectedAttrsForm.Run()
-				if err != nil {
-					return
+				if fieldType != "relation" {
+					selectedAttrsForm := huh.NewForm(
+						huh.NewGroup(
+							huh.NewMultiSelect[string]().
+								Title("Press x to select the attributes").
+								Options(huh.NewOptions(required, unique, primary)...).
+								Value(&selectedAttrs),
+						),
+					)
+					err = selectedAttrsForm.Run()
+					if err != nil {
+						return
+					}
 				}
 
 				fields = append(
@@ -261,6 +294,8 @@ var modelCmd = &cobra.Command{
 						Type:     fieldType,
 						Required: slices.Contains(selectedAttrs, required),
 						Unique:   slices.Contains(selectedAttrs, unique),
+						Primary:  slices.Contains(selectedAttrs, primary),
+						Relation: relation,
 					},
 				)
 			}
