@@ -2,26 +2,7 @@ package {{.PackageName}}
 
 type {{.ModelName | toCamel}} struct {
 {{- range .Fields}}
-    {{- $fieldTag := ""}}
-    {{- $relTag := ""}}
-    {{- if .Primary}}
-        {{- $fieldTag = concat $fieldTag "pk"}}
-    {{- end}}
-    {{- if eq .Relation ""}}
-        {{- if eq $fieldTag ""}}
     {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" db:"{{.Name | toSnake}}"`
-        {{- else}}
-    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" db:"{{.Name | toSnake}}" fieldtag:"{{$fieldTag}}"`
-        {{- end}}
-    {{- else}}
-        {{- $relTag = .Relation}}
-        {{- if eq $fieldTag ""}}
-            {{- $fieldTag = concat $fieldTag "rel"}}
-        {{- else}}
-            {{- $fieldTag = concat $fieldTag "," "rel"}}
-        {{- end}}
-    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" rel:"{{$relTag}}" fieldtag:"{{$fieldTag}}"`
-    {{- end}}
 {{- end}}
 }
 
