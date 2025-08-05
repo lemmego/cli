@@ -1,15 +1,14 @@
 package {{.PackageName}}
 
 import (
-	"context"
 	"github.com/lemmego/gpa"
 	"github.com/lemmego/gpagorm"
-	"github.com/lemmego/lemmego/internal/models"
+	"{{.ModuleName}}/internal/models"
 )
 
 // {{.Name | toCamel}}Repository provides {{.Name | toSnake}}-specific database operations
 type {{.Name | toCamel}}Repository struct {
-	gpa.Repository[models.{{.Name | toCamel}}] // Embed the generic repository
+	gpa.Repository[models.{{.Name | toCamel}}]
 }
 
 // {{.Name | toCamel}} returns a {{.Name | toCamel}}Repository instance

@@ -120,6 +120,7 @@ var inputCmd = &cobra.Command{
 				const required = "Required"
 				const unique = "Unique"
 				selectedAttrs := []string{}
+				tableNameForUniqueField := ""
 				fieldNameForm := huh.NewForm(
 					huh.NewGroup(
 						huh.NewInput().
@@ -174,11 +175,20 @@ var inputCmd = &cobra.Command{
 					return
 				}
 
+				if slices.Contains(selectedAttrs, unique) {
+					err := huh.NewInput().
+						Title("Which db table should be checked for uniqueness?").Value(&tableNameForUniqueField).Run()
+					if err != nil {
+						return
+					}
+				}
+
 				fields = append(fields, &InputField{
 					Name:     fieldName,
 					Type:     fieldType,
 					Required: slices.Contains(selectedAttrs, required),
 					Unique:   slices.Contains(selectedAttrs, unique),
+					Table:    tableNameForUniqueField,
 				})
 			}
 		} else {

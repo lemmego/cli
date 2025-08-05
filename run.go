@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"os/exec"
@@ -45,4 +46,29 @@ func isLemmegoProject() bool {
 		return false
 	}
 	return strings.Contains(string(content), lemmegoIndicator)
+}
+
+// getModuleName reads the go.mod file and returns the module name
+func getModuleName() (string, error) {
+	file, err := os.Open("go.mod")
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "module ") {
+			// Extract everything after "module "
+			moduleName := strings.TrimSpace(line[7:]) // 7 is len("module ")
+			return moduleName, nil
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", err
+	}
+
+	return "", fmt.Errorf("module declaration not found in go.mod")
 }

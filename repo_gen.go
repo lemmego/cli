@@ -42,9 +42,15 @@ func (rg *RepoGenerator) Generate(appendable ...[]byte) error {
 		packageName = parts[len(parts)-1]
 	}
 
+	modName, err := getModuleName()
+	if err != nil {
+		return err
+	}
+
 	tmplData := map[string]interface{}{
 		"PackageName": packageName,
 		"Name":        rg.name,
+		"ModuleName":  modName,
 	}
 
 	if len(appendable) > 0 {

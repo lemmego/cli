@@ -82,7 +82,7 @@ func (mg *MigrationGenerator) BumpVersion() *MigrationGenerator {
 }
 
 func (mg *MigrationGenerator) GetPackagePath() string {
-	path := "cmd/migrations"
+	path := "internal/migrations"
 	if dir := os.Getenv("MIGRATIONS_DIR"); dir != "" {
 		path = dir
 	}
