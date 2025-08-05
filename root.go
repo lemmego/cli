@@ -32,6 +32,7 @@ func Execute() error {
 	genCmd.AddCommand(modelCmd)
 	genCmd.AddCommand(inputCmd)
 	genCmd.AddCommand(formCmd)
+	genCmd.AddCommand(repoCmd)
 
 	AddCmd(newCmd)
 	AddCmd(runCmd)
