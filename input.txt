@@ -11,7 +11,7 @@ import (
 )
 
 type {{.InputName | toCamel}}Input struct {
-    *app.BaseInput
+    ctx      app.Context
 {{- range .Fields}}
     {{- if eq .Type "file"}}
     {{.Name | toCamel}} *httpin.File `json:"{{.Name | toSnake}}" in:"form={{.Name | toSnake}}"`
@@ -21,17 +21,28 @@ type {{.InputName | toCamel}}Input struct {
 {{- end}}
 }
 
+func New{{.InputName | toCamel}}Input(c app.Context) (*{{.InputName | toCamel}}Input, error) {
+    input := &{{.InputName | toCamel}}Input{}
+    err := c.ParseInput(input)
+    if err != nil {
+        return nil, err
+    }
+    input.ctx = c
+    return input, input.Validate()
+}
+
 func (i *{{.InputName | toCamel}}Input) Validate() error {
+    v := i.ctx.Validator()
     {{- range .Fields}}
         {{- if and .Required .Unique}}
-    i.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Required().Unique("{{.Table}}", "{{.Name | toSnake}}")
+    v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Required().Unique("{{.Table}}", "{{.Name | toSnake}}")
         {{- else if .Required}}
-    i.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Required()
+    v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Required()
         {{- else if .Unique}}
-    i.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Unique("{{.Table}}", "{{.Name | toSnake}}")
+    v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Unique("{{.Table}}", "{{.Name | toSnake}}")
         {{- end}}
     {{- end}}
-	return i.Check()
+    return v.Validate()
 }
 
 {{.Appendable}}
