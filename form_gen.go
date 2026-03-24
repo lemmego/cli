@@ -94,7 +94,7 @@ func (fg *FormGenerator) Generate(appendable ...[]byte) error {
 		tmplData[v.Placeholder] = v.Value
 	}
 
-	output, err := ParseTemplate(tmplData, fg.GetStub(), commonFuncs)
+	output, err := ParseTemplate(tmplData, fg.GetStub(), CommonFuncs)
 
 	if err != nil {
 		return err

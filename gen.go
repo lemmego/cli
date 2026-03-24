@@ -43,7 +43,7 @@ var UiDbTypeMap = map[string]string{
 	"file":     "string",
 }
 
-var commonFuncs = template.FuncMap{
+var CommonFuncs = template.FuncMap{
 	"contains":  strings.Contains,
 	"hasSuffix": strings.HasSuffix,
 	"join":      strings.Join,

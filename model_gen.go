@@ -144,7 +144,7 @@ func (mg *ModelGenerator) Generate(appendable ...[]byte) error {
 		tmplData["Appendable"] = string(appendable[0])
 	}
 
-	output, err := ParseTemplate(tmplData, mg.GetStub(), commonFuncs)
+	output, err := ParseTemplate(tmplData, mg.GetStub(), CommonFuncs)
 
 	if err != nil {
 		return err
