@@ -58,7 +58,7 @@ func (hg *HandlerGenerator) Generate(appendable ...[]byte) error {
 		tmplData["Appendable"] = string(appendable[0])
 	}
 
-	output, err := ParseTemplate(tmplData, hg.GetStub(), commonFuncs)
+	output, err := ParseTemplate(tmplData, hg.GetStub(), CommonFuncs)
 
 	if err != nil {
 		return err

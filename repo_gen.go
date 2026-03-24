@@ -57,7 +57,7 @@ func (rg *RepoGenerator) Generate(appendable ...[]byte) error {
 		tmplData["Appendable"] = string(appendable[0])
 	}
 
-	output, err := ParseTemplate(tmplData, rg.GetStub(), commonFuncs)
+	output, err := ParseTemplate(tmplData, rg.GetStub(), CommonFuncs)
 
 	if err != nil {
 		return err
