@@ -4,7 +4,7 @@ package cli
 // Updated per CLI release to ensure generated projects are reproducible.
 var DependencyVersions = map[string]string{
 	// Go dependencies
-	"github.com/lemmego/api":           "v0.1.20",
+	"github.com/lemmego/api":           "v0.1.21",
 	"github.com/lemmego/auth":          "v0.1.1",
 	"github.com/lemmego/gormconnector": "v0.1.1",
 	"github.com/lemmego/bunconnector":  "v0.1.0",
