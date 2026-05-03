@@ -1,0 +1,17 @@
+.env
+.env.test
+tmp/
+.DS_Store
+node_modules/
+.idea/
+.vscode/
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+public/build
+public/hot
+public/storage
+!public/.gitkeep
+storage/*
+!storage/.gitkeep
+!internal/plugins/.gitkeep

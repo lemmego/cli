@@ -48,8 +48,8 @@ func isLemmegoProject() bool {
 	return strings.Contains(string(content), lemmegoIndicator)
 }
 
-// getModuleName reads the go.mod file and returns the module name
-func getModuleName() (string, error) {
+// GetModuleName reads the go.mod file and returns the module name
+func GetModuleName() (string, error) {
 	file, err := os.Open("go.mod")
 	if err != nil {
 		return "", err
