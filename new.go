@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var enableExperimental bool
+
 var newCmd = &cobra.Command{
 	Use:     "new [dirname]",
 	Aliases: []string{"n"},
@@ -20,7 +22,7 @@ var newCmd = &cobra.Command{
 		dirname := args[0]
 		dirPath := DirPath(dirname)
 
-		cfg := collectProjectConfig(dirname)
+		cfg := collectProjectConfig(dirname, enableExperimental)
 		if cfg == nil {
 			return
 		}

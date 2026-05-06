@@ -104,9 +104,17 @@ func resolveOverlays(cfg ProjectConfig) []string {
 
 	if cfg.EnableAuth {
 		if cfg.ORM == OrmGORM {
-			overlays = append(overlays, "overlays/auth_gorm")
+			if cfg.EnableGPA {
+				overlays = append(overlays, "overlays/auth_gorm_gpa")
+			} else {
+				overlays = append(overlays, "overlays/auth_gorm")
+			}
 		} else {
-			overlays = append(overlays, "overlays/auth_bun")
+			if cfg.EnableGPA {
+				overlays = append(overlays, "overlays/auth_bun_gpa")
+			} else {
+				overlays = append(overlays, "overlays/auth_bun")
+			}
 		}
 	}
 

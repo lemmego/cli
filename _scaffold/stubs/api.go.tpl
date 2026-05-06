@@ -7,10 +7,12 @@ import (
 	"net/http"
 
 	"github.com/lemmego/auth"
-	"github.com/lemmego/gpa"
 	"github.com/lemmego/lemmego/internal/inputs"
 	"github.com/lemmego/lemmego/internal/models"
 	"github.com/lemmego/lemmego/internal/repos"
+	{{- if .EnableGPA}}
+	"github.com/lemmego/gpa"
+	{{- end}}
 	{{- end}}
 )
 
@@ -45,7 +47,11 @@ func ApiRoutes(a app.App) {
 				Password: input.Password,
 			}
 
+			{{- if .EnableGPA}}
 			if err := repos.User().Create(c.RequestContext(), user); err != nil {
+			{{- else}}
+			if err := repos.User(a).Create(c.RequestContext(), user); err != nil {
+			{{- end}}
 				return err
 			}
 
@@ -58,7 +64,11 @@ func ApiRoutes(a app.App) {
 				return err
 			}
 
+			{{- if .EnableGPA}}
 			user, err := repos.User().QueryOne(c.RequestContext(), gpa.Where("email", "=", input.Email))
+			{{- else}}
+			user, err := repos.User(a).FindByEmail(c.RequestContext(), input.Email)
+			{{- end}}
 			if err != nil {
 				return err
 			}

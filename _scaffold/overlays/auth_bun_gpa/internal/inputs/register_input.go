@@ -2,6 +2,7 @@ package inputs
 
 import (
 	"github.com/lemmego/api/app"
+	"github.com/lemmego/gpa"
 	"github.com/lemmego/lemmego/internal/repos"
 )
 
@@ -27,7 +28,7 @@ func (i *RegisterInput) Validate() error {
 	v := i.ctx.Validator()
 	v.Field("name", i.Name).Required().Max(255)
 	v.Field("email", i.Email).Required().Email().Custom(func(v interface{}) (bool, string) {
-		exists, err := repos.User(i.ctx.App()).ExistsByEmail(i.ctx.RequestContext(), i.Email)
+		exists, err := repos.User().Exists(i.ctx.RequestContext(), gpa.Where("email", "=", i.Email))
 		if err != nil {
 			return false, "Error checking email uniqueness"
 		}

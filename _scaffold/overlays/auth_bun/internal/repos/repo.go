@@ -1,10 +1,11 @@
 package repos
 
 import (
-	"github.com/lemmego/gpa"
-	"github.com/lemmego/gpabun"
+	"github.com/uptrace/bun"
+
+	"github.com/lemmego/api/app"
 )
 
-func SQLRepo[T any](instanceName ...string) gpa.SQLRepository[T] {
-	return gpabun.GetRepositoryFromRegistry[T](instanceName...)
+func getDB(a app.App) *bun.DB {
+	return app.Get[*bun.DB](a)
 }
