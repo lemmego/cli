@@ -26,10 +26,10 @@ func LoadProviders() []app.Provider {
 		&inertia.Provider{},
 		{{- end}}
 		{{- if eq .ORM "gorm"}}
-		&gormconnector.Provider{{if .EnableGPA}}{UseGPA: true}{{end}},
+		&gormconnector.Provider{{if .EnableGPA}}{UseGPA: true}{{else}}{}{{end}},
 		{{- end}}
 		{{- if eq .ORM "bun"}}
-		&bunconnector.Provider{{if .EnableGPA}}{UseGPA: true}{{end}},
+		&bunconnector.Provider{{if .EnableGPA}}{UseGPA: true}{{else}}{}{{end}},
 		{{- end}}
 		{{- if .EnableAuth}}
 		&auth.Provider{

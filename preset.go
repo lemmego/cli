@@ -102,13 +102,11 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 	}
 
 	if enableExperimental {
-		formFields = append(formFields,
-			huh.NewConfirm().
-				Title("Enable GPA? (experimental)").
-				Affirmative("Yes").
-				Negative("No").
-				Value(&enableGPA),
-		)
+		formFields = append(formFields, huh.NewConfirm().
+			Title("Enable GPA? (experimental)").
+			Affirmative("Yes").
+			Negative("No").
+			Value(&enableGPA))
 	}
 
 	form1 := huh.NewForm(
