@@ -21,10 +21,13 @@ var newCmd = &cobra.Command{
 		dirPath := DirPath(dirname)
 
 		cfg := collectProjectConfig(dirname)
+		if cfg == nil {
+			return
+		}
 
 		EnsureEmptyDir(dirname)
 
-		if err := ScaffoldProject(cfg, dirPath); err != nil {
+		if err := ScaffoldProject(*cfg, dirPath); err != nil {
 			log.Fatal("Error scaffolding project:", err)
 		}
 
@@ -32,7 +35,7 @@ var newCmd = &cobra.Command{
 		copyEnvFile(dirPath)
 		createSQLiteDatabase(dirPath)
 
-		if hasNodeDeps(cfg) {
+		if hasNodeDeps(*cfg) {
 			EnsureBinary("node")
 			installNodeModules(dirPath)
 			buildFrontend(dirPath)
@@ -40,7 +43,7 @@ var newCmd = &cobra.Command{
 
 		installGoModules(dirPath)
 
-		if hasTemplGenerate(cfg) {
+		if hasTemplGenerate(*cfg) {
 			fmt.Println("> Generating templ files...")
 			RunCommand(dirPath, "templ", "generate")
 		}
@@ -48,7 +51,7 @@ var newCmd = &cobra.Command{
 		fmt.Printf("\nSuccessfully created a new Lemmego app with module name: %s in directory: %s\n", cfg.ModuleName, dirname)
 		fmt.Println("> Navigate to your new project, and run:")
 		fmt.Println("cd", dirname)
-		fmt.Println("lemmego run")
+		fmt.Println("lemmego dev")
 	},
 }
 
