@@ -35,6 +35,8 @@ func Execute() error {
 
 	AddCmd(newCmd)
 	AddCmd(runCmd)
+	AddCmd(devCmd)
+	AddCmd(buildCmd)
 	AddCmd(genCmd)
 
 	return rootCmd.Execute()

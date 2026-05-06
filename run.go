@@ -17,23 +17,30 @@ var runCmd = &cobra.Command{
 	Use:   "run [args]",
 	Short: "Run the Lemmego application with optional arguments",
 	Run: func(cmd *cobra.Command, args []string) {
-		// Check if we're in a Lemmego project
 		if !isLemmegoProject() {
 			fmt.Println("Error: This does not appear to be a Lemmego project directory.")
 			return
 		}
 
-		// Construct the go run command
-		goRunCmd := exec.Command("go", append([]string{"run", "./cmd/app"}, args...)...)
+		// Build assets before running
+		if hasTemplFiles() {
+			EnsureBinary("templ")
+			fmt.Println("> Generating templ files...")
+			RunCommand(".", "templ", "generate")
+		}
+		if fileExists("package.json") {
+			EnsureBinary("node")
+			fmt.Println("> Building frontend assets...")
+			RunCommand(".", npmBinary(), "run", "build")
+		}
 
-		// Set up stdout and stderr to be the same as the parent's
+		// Run the application
+		goRunCmd := exec.Command("go", append([]string{"run", "./cmd/app"}, args...)...)
 		goRunCmd.Stdout = os.Stdout
 		goRunCmd.Stderr = os.Stderr
 
-		// Execute the command
 		if err := goRunCmd.Run(); err != nil {
 			fmt.Printf("Error running the app: %v\n", err)
-			return
 		}
 	},
 }
