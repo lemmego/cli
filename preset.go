@@ -51,10 +51,11 @@ type ProjectConfig struct {
 	ORM         OrmChoice
 	EnableRedis bool
 	EnableAuth  bool
+	EnableGPA   bool
 	Frontend    FrontendPreset
 }
 
-func collectProjectConfig(dirname string) *ProjectConfig {
+func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfig {
 	cfg := ProjectConfig{Name: dirname}
 
 	var moduleName string
@@ -62,43 +63,56 @@ func collectProjectConfig(dirname string) *ProjectConfig {
 	var orm string
 	var enableRedis bool
 	var enableAuth bool
+	var enableGPA bool
+
+	formFields := []huh.Field{
+		huh.NewInput().
+			Title("Module Name (e.g. github.com/username/repo)").
+			Value(&moduleName).
+			Validate(func(s string) error {
+				if s == "" {
+					return fmt.Errorf("module name is required")
+				}
+				return nil
+			}),
+		huh.NewSelect[string]().
+			Title("Preset").
+			Options(
+				huh.NewOption("MVC", "mvc"),
+				huh.NewOption("REST API", "rest_api"),
+			).
+			Value(&preset),
+		huh.NewSelect[string]().
+			Title("Choose an SQL ORM").
+			Options(
+				huh.NewOption("GORM", "gorm"),
+				huh.NewOption("Bun", "bun"),
+			).
+			Value(&orm),
+		huh.NewConfirm().
+			Title("Enable Redis?").
+			Affirmative("Yes").
+			Negative("No").
+			Value(&enableRedis),
+		huh.NewConfirm().
+			Title("Enable Auth?").
+			Affirmative("Yes").
+			Negative("No").
+			Value(&enableAuth),
+	}
+
+	if enableExperimental {
+		formFields = append(formFields,
+			huh.NewConfirm().
+				Title("Enable GPA? (experimental)").
+				Affirmative("Yes").
+				Negative("No").
+				Value(&enableGPA),
+		)
+	}
 
 	form1 := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Module Name (e.g. github.com/username/repo)").
-				Value(&moduleName).
-				Validate(func(s string) error {
-					if s == "" {
-						return fmt.Errorf("module name is required")
-					}
-					return nil
-				}),
-			huh.NewSelect[string]().
-				Title("Preset").
-				Options(
-					huh.NewOption("MVC", "mvc"),
-					huh.NewOption("REST API", "rest_api"),
-				).
-				Value(&preset),
-			huh.NewSelect[string]().
-				Title("Choose an SQL ORM").
-				Options(
-					huh.NewOption("GORM", "gorm"),
-					huh.NewOption("Bun", "bun"),
-				).
-				Value(&orm),
-			huh.NewConfirm().
-				Title("Enable Redis?").
-				Affirmative("Yes").
-				Negative("No").
-				Value(&enableRedis),
-			huh.NewConfirm().
-				Title("Enable Auth?").
-				Affirmative("Yes").
-				Negative("No").
-				Value(&enableAuth),
-		),
+		huh.NewGroup(formFields...),
 	)
 
 	if err := form1.Run(); err != nil {
@@ -110,6 +124,7 @@ func collectProjectConfig(dirname string) *ProjectConfig {
 	cfg.ORM = OrmChoice(orm)
 	cfg.EnableRedis = enableRedis
 	cfg.EnableAuth = enableAuth
+	cfg.EnableGPA = enableGPA
 
 	if cfg.Preset == PresetMVC {
 		var frontend string

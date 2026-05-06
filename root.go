@@ -25,6 +25,7 @@ func AddCmd(cmd *cobra.Command) {
 
 // Execute the command and register the sub-commands.
 func Execute() error {
+	newCmd.Flags().BoolVar(&enableExperimental, "exp", false, "Enable experimental features (GPA)")
 	genCmd.PersistentFlags().BoolVarP(&shouldRunInteractively, "interactive", "i", false, "Run interactively")
 
 	genCmd.AddCommand(handlerCmd)

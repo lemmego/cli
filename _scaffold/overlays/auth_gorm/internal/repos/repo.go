@@ -1,10 +1,11 @@
 package repos
 
 import (
-	"github.com/lemmego/gpa"
-	"github.com/lemmego/gpagorm"
+	"gorm.io/gorm"
+
+	"github.com/lemmego/api/app"
 )
 
-func SQLRepo[T any](instanceName ...string) gpa.MigratableRepository[T] {
-	return gpagorm.GetRepository[T](instanceName...)
+func getDB(a app.App) *gorm.DB {
+	return app.Get[*gorm.DB](a)
 }
