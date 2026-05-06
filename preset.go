@@ -54,7 +54,7 @@ type ProjectConfig struct {
 	Frontend    FrontendPreset
 }
 
-func collectProjectConfig(dirname string) ProjectConfig {
+func collectProjectConfig(dirname string) *ProjectConfig {
 	cfg := ProjectConfig{Name: dirname}
 
 	var moduleName string
@@ -102,8 +102,7 @@ func collectProjectConfig(dirname string) ProjectConfig {
 	)
 
 	if err := form1.Run(); err != nil {
-		fmt.Println("Error:", err)
-		return cfg
+		return nil
 	}
 
 	cfg.ModuleName = moduleName
@@ -130,11 +129,10 @@ func collectProjectConfig(dirname string) ProjectConfig {
 			),
 		)
 		if err := form2.Run(); err != nil {
-			fmt.Println("Error:", err)
-			return cfg
+			return nil
 		}
 		cfg.Frontend = FrontendPreset(frontend)
 	}
 
-	return cfg
+	return &cfg
 }
