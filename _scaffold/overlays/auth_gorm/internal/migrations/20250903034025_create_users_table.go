@@ -15,7 +15,7 @@ func init() {
 
 func mig_20250903034025_create_users_table_up(tx *sql.Tx) error {
 	schema := migration.Create("users", func(t *migration.Table) {
-		t.UnsignedBigInt("id").Primary()
+		t.BigIncrements("id")
 		t.Text("email").Unique()
 		t.Text("name")
 		t.Text("password")
