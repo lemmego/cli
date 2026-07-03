@@ -207,6 +207,7 @@ func generateDynamicFiles(td templateData, destDir string) error {
 	stubs["internal/routes/api.go"] = "_scaffold/stubs/api.go.tpl"
 
 	if td.Frontend.HasNodeDeps() {
+		stubs["pnpm-workspace.yaml"] = "_scaffold/stubs/pnpm-workspace.yaml.tpl"
 		stubs["package.json"] = "_scaffold/stubs/package.json.tpl"
 		stubs["vite.config.js"] = "_scaffold/stubs/vite.config.js.tpl"
 	}
