@@ -8,9 +8,9 @@ function Install-Lemmego {
 
     if ($arch -match "64-bit") {
         if ($env:PROCESSOR_ARCHITEW6432 -eq "ARM64") {
-            $downloadUrl = "https://github.com/lemmego/cli/releases/download/v0.1.25/lemmego-v0.1.25-windows-arm64.exe"
+            $downloadUrl = "https://github.com/lemmego/cli/releases/download/v0.1.26/lemmego-v0.1.26-windows-arm64.exe"
         } else {
-            $downloadUrl = "https://github.com/lemmego/cli/releases/download/v0.1.25/lemmego-v0.1.25-windows-amd64.exe"
+            $downloadUrl = "https://github.com/lemmego/cli/releases/download/v0.1.26/lemmego-v0.1.26-windows-amd64.exe"
         }
     } else {
         Write-Host "Unsupported architecture: $arch"
