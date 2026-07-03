@@ -4,7 +4,6 @@ import (
 	"github.com/lemmego/api/app"
 	{{- if .EnableAuth}}
 	"fmt"
-	"net/http"
 
 	"github.com/lemmego/auth"
 	"github.com/lemmego/lemmego/internal/inputs"
@@ -26,8 +25,7 @@ func ApiRoutes(a app.App) {
 		{{- if .EnableAuth}}
 
 		apiGroup.Post("/logout", func(c app.Context) error {
-			app.Get[*auth.Auth](a).Logout(c.RequestContext())
-			c.SetCookie(&http.Cookie{Name: "jwt", Value: "", Path: "/", MaxAge: -1})
+			auth.Logout(c)
 			return c.JSON(app.M{"message": "Logged out successfully"})
 		})
 
