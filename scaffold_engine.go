@@ -29,6 +29,9 @@ func (td templateData) Version(pkg string) string {
 }
 
 func ScaffoldProject(cfg ProjectConfig, destDir string) error {
+	// Try to fetch the latest scaffold from GitHub (non-fatal)
+	fetchLatestScaffold()
+
 	td := buildTemplateData(cfg)
 	overlays := resolveOverlays(cfg)
 
