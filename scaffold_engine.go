@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"text/template"
@@ -28,16 +29,31 @@ func (td templateData) Version(pkg string) string {
 	return v
 }
 
+// scaffoldSource bundles an fs.FS with its internal path prefix.
+type scaffoldSource struct {
+	fs     fs.FS
+	prefix string
+}
+
+// resolveScaffoldSource returns the scaffold source, preferring the cached
+// scaffold on disk over the embedded one.
+func resolveScaffoldSource() scaffoldSource {
+	if dir := scaffoldDir(); dir != "" {
+		return scaffoldSource{fs: os.DirFS(dir), prefix: ""}
+	}
+	return scaffoldSource{fs: scaffoldEmbedFS, prefix: "_scaffold"}
+}
+
 func ScaffoldProject(cfg ProjectConfig, destDir string) error {
-	// Try to fetch the latest scaffold from GitHub (non-fatal)
 	fetchLatestScaffold()
+	src := resolveScaffoldSource()
 
 	td := buildTemplateData(cfg)
 	overlays := resolveOverlays(cfg)
 
 	fmt.Println("> Scaffolding project...")
 
-	if err := copyBaseFiles(destDir); err != nil {
+	if err := copyBaseFiles(destDir, src); err != nil {
 		return fmt.Errorf("copying base files: %w", err)
 	}
 
@@ -53,12 +69,12 @@ func ScaffoldProject(cfg ProjectConfig, destDir string) error {
 	)
 
 	for _, overlay := range overlays {
-		if err := applyOverlay(overlay, destDir); err != nil {
+		if err := applyOverlay(overlay, destDir, src); err != nil {
 			return fmt.Errorf("applying overlay %s: %w", overlay, err)
 		}
 	}
 
-	if err := generateDynamicFiles(td, destDir); err != nil {
+	if err := generateDynamicFiles(td, destDir, src); err != nil {
 		return fmt.Errorf("generating dynamic files: %w", err)
 	}
 
@@ -67,10 +83,10 @@ func ScaffoldProject(cfg ProjectConfig, destDir string) error {
 
 func buildTemplateData(cfg ProjectConfig) templateData {
 	td := templateData{
-		ProjectConfig:   cfg,
-		SessionDriver:   "file",
-		InertiaProvider: cfg.Frontend.HasInertia(),
-		HasTempl:        cfg.Frontend.HasTempl() || cfg.Preset == PresetRESTAPI,
+		ProjectConfig:    cfg,
+		SessionDriver:    "file",
+		InertiaProvider:  cfg.Frontend.HasInertia(),
+		HasTempl:         cfg.Frontend.HasTempl() || cfg.Preset == PresetRESTAPI,
 		FrontendHasTempl: cfg.Frontend.HasTempl(),
 		FrontendHasReact: cfg.Frontend == FrontendInertiaReact || cfg.Frontend == FrontendTemplInertiaReact,
 		FrontendHasVue:   cfg.Frontend == FrontendInertiaVue || cfg.Frontend == FrontendTemplInertiaVue,
@@ -124,24 +140,26 @@ func resolveOverlays(cfg ProjectConfig) []string {
 	return overlays
 }
 
-func copyBaseFiles(destDir string) error {
-	return fs.WalkDir(scaffoldFS, "_scaffold/base", func(path string, d fs.DirEntry, err error) error {
+func copyBaseFiles(destDir string, src scaffoldSource) error {
+	root := path.Join(src.prefix, "base")
+
+	return fs.WalkDir(src.fs, root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		relPath := strings.TrimPrefix(path, "_scaffold/base/")
-		if relPath == "_scaffold/base" {
+		relPath := strings.TrimPrefix(p, root+"/")
+		if relPath == root || relPath == "" {
 			return nil
 		}
 
-		destPath := filepath.Join(destDir, relPath)
+		destPath := filepath.Join(destDir, filepath.FromSlash(relPath))
 
 		if d.IsDir() {
 			return os.MkdirAll(destPath, 0755)
 		}
 
-		data, err := fs.ReadFile(scaffoldFS, path)
+		data, err := fs.ReadFile(src.fs, p)
 		if err != nil {
 			return err
 		}
@@ -154,31 +172,31 @@ func copyBaseFiles(destDir string) error {
 	})
 }
 
-func applyOverlay(overlayPath string, destDir string) error {
-	fullPath := "_scaffold/" + overlayPath
+func applyOverlay(overlayPath string, destDir string, src scaffoldSource) error {
+	root := path.Join(src.prefix, "overlays", overlayPath)
 
-	_, err := fs.Stat(scaffoldFS, fullPath)
+	_, err := fs.Stat(src.fs, root)
 	if err != nil {
 		return nil
 	}
 
-	return fs.WalkDir(scaffoldFS, fullPath, func(path string, d fs.DirEntry, err error) error {
+	return fs.WalkDir(src.fs, root, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 
-		relPath := strings.TrimPrefix(path, fullPath+"/")
-		if relPath == fullPath {
+		relPath := strings.TrimPrefix(p, root+"/")
+		if relPath == root || relPath == "" {
 			return nil
 		}
 
-		destPath := filepath.Join(destDir, relPath)
+		destPath := filepath.Join(destDir, filepath.FromSlash(relPath))
 
 		if d.IsDir() {
 			return os.MkdirAll(destPath, 0755)
 		}
 
-		data, err := fs.ReadFile(scaffoldFS, path)
+		data, err := fs.ReadFile(src.fs, p)
 		if err != nil {
 			return err
 		}
@@ -191,47 +209,50 @@ func applyOverlay(overlayPath string, destDir string) error {
 	})
 }
 
-func generateDynamicFiles(td templateData, destDir string) error {
+func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) error {
 	stubs := map[string]string{
-		"bootstrap/providers.go":  "_scaffold/stubs/providers.go.tpl",
-		"bootstrap/routes.go":     "_scaffold/stubs/routes_bootstrap.go.tpl",
-		"bootstrap/middleware.go":  "_scaffold/stubs/middleware.go.tpl",
-		"internal/configs/database.go": "_scaffold/stubs/database.go.tpl",
-		"internal/configs/session.go":  "_scaffold/stubs/session.go.tpl",
-		"cmd/app/main.go":         "_scaffold/stubs/main.go.tpl",
-		"go.mod":                  "_scaffold/stubs/go.mod.tpl",
-		".env.example":            "_scaffold/stubs/env.example.tpl",
+		"bootstrap/providers.go":         "providers.go.tpl",
+		"bootstrap/routes.go":            "routes_bootstrap.go.tpl",
+		"bootstrap/middleware.go":         "middleware.go.tpl",
+		"internal/configs/database.go":   "database.go.tpl",
+		"internal/configs/session.go":    "session.go.tpl",
+		"cmd/app/main.go":                "main.go.tpl",
+		"go.mod":                         "go.mod.tpl",
+		".env.example":                   "env.example.tpl",
 	}
 
 	if td.Preset == PresetMVC {
-		stubs["internal/routes/web.go"] = "_scaffold/stubs/web.go.tpl"
+		stubs["internal/routes/web.go"] = "web.go.tpl"
 	}
 
-	stubs["internal/routes/api.go"] = "_scaffold/stubs/api.go.tpl"
+	stubs["internal/routes/api.go"] = "api.go.tpl"
 
 	if td.Frontend.HasNodeDeps() {
-		stubs["pnpm-workspace.yaml"] = "_scaffold/stubs/pnpm-workspace.yaml.tpl"
-		stubs["package.json"] = "_scaffold/stubs/package.json.tpl"
-		stubs["vite.config.js"] = "_scaffold/stubs/vite.config.js.tpl"
+		stubs["pnpm-workspace.yaml"] = "pnpm-workspace.yaml.tpl"
+		stubs["package.json"] = "package.json.tpl"
+		stubs["vite.config.js"] = "vite.config.js.tpl"
 	}
 
-	for destRelPath, stubPath := range stubs {
-		tmplData, err := fs.ReadFile(scaffoldFS, stubPath)
+	stubsDir := path.Join(src.prefix, "stubs")
+
+	for destRelPath, stubRelPath := range stubs {
+		stubFullPath := path.Join(stubsDir, stubRelPath)
+		tmplData, err := fs.ReadFile(src.fs, stubFullPath)
 		if err != nil {
-			return fmt.Errorf("reading stub %s: %w", stubPath, err)
+			return fmt.Errorf("reading stub %s: %w", stubFullPath, err)
 		}
 
-		tmpl, err := template.New(stubPath).Parse(string(tmplData))
+		tmpl, err := template.New(stubRelPath).Parse(string(tmplData))
 		if err != nil {
-			return fmt.Errorf("parsing template %s: %w", stubPath, err)
+			return fmt.Errorf("parsing template %s: %w", stubRelPath, err)
 		}
 
 		var buf bytes.Buffer
 		if err := tmpl.Execute(&buf, td); err != nil {
-			return fmt.Errorf("executing template %s: %w", stubPath, err)
+			return fmt.Errorf("executing template %s: %w", stubRelPath, err)
 		}
 
-		destPath := filepath.Join(destDir, destRelPath)
+		destPath := filepath.Join(destDir, filepath.FromSlash(destRelPath))
 		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
 			return err
 		}
