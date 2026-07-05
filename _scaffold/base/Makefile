@@ -12,6 +12,9 @@ deps:
 	@go install github.com/a-h/templ/cmd/templ@latest
 	@go install github.com/air-verse/air@latest
 
+appkey:
+	@lemmego run appkey
+
 migrate:
 	@lemmego run migrate up
 

@@ -35,6 +35,7 @@ var newCmd = &cobra.Command{
 
 		renameModule(cfg.ModuleName, dirPath)
 		copyEnvFile(dirPath)
+		generateAppKey(dirPath)
 		createSQLiteDatabase(dirPath)
 
 		if hasNodeDeps(*cfg) {
@@ -99,6 +100,11 @@ func copyEnvFile(dirPath string) {
 	} else if !os.IsNotExist(err) {
 		fmt.Println("Warning: Error checking for .env.example file:", err)
 	}
+}
+
+func generateAppKey(dirPath string) {
+	fmt.Println("> Generating app key...")
+	RunCommand(dirPath, "lemmego", "run", "appkey")
 }
 
 func renameModule(newModuleName string, dirPath string) {
