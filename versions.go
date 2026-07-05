@@ -14,7 +14,7 @@ var DependencyVersions = map[string]string{
 	"github.com/lemmego/inertia":       "v0.1.2",
 	"github.com/lemmego/migration":     "v0.1.14",
 	"github.com/lemmego/fsys":          "v0.1.0",
-	"github.com/lemmego/cli":           "v0.1.29",
+	"github.com/lemmego/cli":           "v0.1.30",
 	"github.com/a-h/templ":             "v0.3.943",
 	"github.com/spf13/cobra":           "v1.8.1",
 
@@ -38,3 +38,8 @@ var DependencyVersions = map[string]string{
 	"axios":                "^1.7.7",
 	"@tailwindcss/forms":   "^0.5.7",
 }
+
+// ScaffoldVersion is the embedded _scaffold/ directory version.
+// The CLI fetches a newer version from GitHub main branch if available.
+// Bump this when the scaffold content changes significantly.
+const ScaffoldVersion = "1.0.0"

@@ -5,9 +5,11 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 )
 
 // ScanStr scans the given input
@@ -165,4 +167,139 @@ func RunCommand(dirPath string, command string, args ...string) {
 		log.Fatal(err)
 	}
 	fmt.Printf("%s\n", stdoutStderr)
+}
+
+const scaffoldCacheDir = ".cache/lemmego/scaffold"
+const scaffoldRepoOwner = "lemmego"
+const scaffoldRepoName = "cli"
+const scaffoldRepoBranch = "main"
+
+// scaffoldCache returns the path to the local scaffold cache directory.
+func scaffoldCache() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return filepath.Join(home, scaffoldCacheDir)
+}
+
+// scaffoldCacheVersion returns the cached scaffold version string, or "".
+func scaffoldCacheVersion() string {
+	cacheDir := scaffoldCache()
+	if cacheDir == "" {
+		return ""
+	}
+	data, err := os.ReadFile(filepath.Join(cacheDir, "VERSION"))
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(data))
+}
+
+// fetchLatestScaffold attempts to download the latest scaffold from GitHub main
+// into the local cache. Returns true if a newer version was fetched, false if
+// the cache is already current or if the fetch fails (non-fatal).
+func fetchLatestScaffold() bool {
+	cacheDir := scaffoldCache()
+	if cacheDir == "" {
+		return false
+	}
+
+	// Fetch remote VERSION
+	versionURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/_scaffold/VERSION",
+		scaffoldRepoOwner, scaffoldRepoName, scaffoldRepoBranch)
+	resp, err := http.Get(versionURL)
+	if err != nil {
+		return false
+	}
+	defer resp.Body.Close()
+
+	remoteVersionBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return false
+	}
+	remoteVersion := strings.TrimSpace(string(remoteVersionBytes))
+	if remoteVersion == "" {
+		return false
+	}
+
+	// Compare with cached version
+	if scaffoldCacheVersion() == remoteVersion && dirExists(filepath.Join(cacheDir, "_scaffold")) {
+		return false
+	}
+
+	// Download tarball from GitHub
+	tarballURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s",
+		scaffoldRepoOwner, scaffoldRepoName, scaffoldRepoBranch)
+
+	req, err := http.NewRequest("GET", tarballURL, nil)
+	if err != nil {
+		return false
+	}
+	req.Header.Set("Accept", "application/vnd.github.v3.raw")
+
+	resp2, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return false
+	}
+	defer resp2.Body.Close()
+
+	// Extract to temp dir, then move _scaffold/ to cache
+	tmpDir, err := os.MkdirTemp("", "lemmego-scaffold-*")
+	if err != nil {
+		return false
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Download and extract using system tar
+	tarPath, err := os.CreateTemp("", "scaffold-*.tar.gz")
+	if err != nil {
+		return false
+	}
+	defer os.Remove(tarPath.Name())
+
+	if _, err := io.Copy(tarPath, resp2.Body); err != nil {
+		return false
+	}
+	tarPath.Close()
+
+	// Extract
+	cmd := exec.Command("tar", "-xzf", tarPath.Name(), "-C", tmpDir, "--strip-components=1")
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+
+	// Move _scaffold/ into cache
+	os.RemoveAll(filepath.Join(cacheDir, "_scaffold"))
+	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+		return false
+	}
+
+	if err := CopyDir(filepath.Join(tmpDir, "_scaffold"), filepath.Join(cacheDir, "_scaffold")); err != nil {
+		return false
+	}
+
+	// Write VERSION
+	os.WriteFile(filepath.Join(cacheDir, "VERSION"), []byte(remoteVersion), 0644)
+
+	return true
+}
+
+func dirExists(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
+}
+
+// scaffoldDir returns the path to the scaffold to use (cached or embedded).
+// Returns the embedded "_scaffold" marker if no cache is available.
+func scaffoldDir() string {
+	cacheDir := scaffoldCache()
+	if cacheDir == "" {
+		return ""
+	}
+	candidate := filepath.Join(cacheDir, "_scaffold")
+	if dirExists(candidate) {
+		return candidate
+	}
+	return ""
 }
