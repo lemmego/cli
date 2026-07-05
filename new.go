@@ -35,7 +35,6 @@ var newCmd = &cobra.Command{
 
 		renameModule(cfg.ModuleName, dirPath)
 		copyEnvFile(dirPath)
-		generateAppKey(dirPath)
 		createSQLiteDatabase(dirPath)
 
 		if hasNodeDeps(*cfg) {
@@ -45,6 +44,7 @@ var newCmd = &cobra.Command{
 		}
 
 		installGoModules(dirPath)
+		generateAppKey(dirPath)
 
 		if hasTemplGenerate(*cfg) {
 			fmt.Println("> Generating templ files...")
