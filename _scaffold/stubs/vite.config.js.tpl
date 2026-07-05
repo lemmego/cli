@@ -7,8 +7,17 @@ import react from "@vitejs/plugin-react";
 import vue from "@vitejs/plugin-vue";
 {{- end}}
 import tailwindcss from "@tailwindcss/vite";
+{{- if .InertiaProvider}}
+import inertia from "@inertiajs/vite";
+{{- end}}
+import path from "path";
 
 export default defineConfig({
+  resolve: {
+    alias: {
+      "@": path.resolve(__dirname, "./resources/js"),
+    },
+  },
   plugins: [
     tailwindcss(),
     laravel({
@@ -31,6 +40,9 @@ export default defineConfig({
     vue({
       include: [/\.vue$/],
     }),
+    {{- end}}
+    {{- if .InertiaProvider}}
+    inertia(),
     {{- end}}
   ],
   {{- if .FrontendHasReact}}

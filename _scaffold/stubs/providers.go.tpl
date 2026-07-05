@@ -23,7 +23,11 @@ func LoadProviders() []app.Provider {
 		&fs.Provider{},
 		&session.Provider{},
 		{{- if .InertiaProvider}}
-		&inertia.Provider{},
+		&inertia.Provider{
+			Options: []inertia.Option{
+				inertia.WithSSR(),
+			},
+		},
 		{{- end}}
 		{{- if eq .ORM "gorm"}}
 		&gormconnector.Provider{{if .EnableGPA}}{UseGPA: true}{{else}}{}{{end}},
