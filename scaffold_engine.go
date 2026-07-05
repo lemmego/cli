@@ -173,7 +173,7 @@ func copyBaseFiles(destDir string, src scaffoldSource) error {
 }
 
 func applyOverlay(overlayPath string, destDir string, src scaffoldSource) error {
-	root := path.Join(src.prefix, "overlays", overlayPath)
+	root := path.Join(src.prefix, overlayPath)
 
 	_, err := fs.Stat(src.fs, root)
 	if err != nil {
