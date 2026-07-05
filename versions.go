@@ -4,7 +4,7 @@ package cli
 // Updated per CLI release to ensure generated projects are reproducible.
 var DependencyVersions = map[string]string{
 	// Go dependencies
-	"github.com/lemmego/api":           "v0.1.24",
+	"github.com/lemmego/api":           "v0.1.25",
 	"github.com/lemmego/auth":          "v0.1.4",
 	"github.com/lemmego/gormconnector": "v0.1.2",
 	"github.com/lemmego/bunconnector":  "v0.1.1",
@@ -14,7 +14,7 @@ var DependencyVersions = map[string]string{
 	"github.com/lemmego/inertia":       "v0.1.2",
 	"github.com/lemmego/migration":     "v0.1.14",
 	"github.com/lemmego/fsys":          "v0.1.0",
-	"github.com/lemmego/cli":           "v0.1.33",
+	"github.com/lemmego/cli":           "v0.1.34",
 	"github.com/a-h/templ":             "v0.3.943",
 	"github.com/spf13/cobra":           "v1.8.1",
 
