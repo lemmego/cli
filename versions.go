@@ -11,10 +11,10 @@ var DependencyVersions = map[string]string{
 	"github.com/lemmego/gpa":           "v0.1.1",
 	"github.com/lemmego/gpagorm":       "v0.1.5",
 	"github.com/lemmego/gpabun":        "v0.1.4",
-	"github.com/lemmego/inertia":       "v0.1.3",
+	"github.com/lemmego/inertia":       "v0.1.4",
 	"github.com/lemmego/migration":     "v0.1.14",
 	"github.com/lemmego/fsys":          "v0.1.0",
-	"github.com/lemmego/cli":           "v0.1.35",
+	"github.com/lemmego/cli":           "v0.1.36",
 	"github.com/a-h/templ":             "v0.3.943",
 	"github.com/spf13/cobra":           "v1.8.1",
 
