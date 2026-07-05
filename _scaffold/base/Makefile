@@ -35,3 +35,12 @@ model:
 
 form:
 	@lemmego g form $(n)
+
+ssr-start:
+	@lemmego inertia-ssr start
+
+ssr-stop:
+	@lemmego inertia-ssr stop
+
+ssr-check:
+	@lemmego inertia-ssr check

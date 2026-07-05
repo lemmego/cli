@@ -3,10 +3,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    {{- if .FrontendHasReact}}
-    "build:ssr": "vite build --ssr && node bootstrap/ssr/ssr.js",
-    {{- end}}
-    {{- if .FrontendHasVue}}
+    {{- if .InertiaProvider}}
     "build:ssr": "vite build --ssr && node bootstrap/ssr/ssr.js",
     {{- end}}
     "build:static": "npx @tailwindcss/cli -i static/css/style.css -o static/css/dist.css --minify",
@@ -33,13 +30,19 @@
   "dependencies": {
     {{- if .FrontendHasReact}}
     "@inertiajs/react": "{{.Version "@inertiajs/react"}}",
+    {{- end}}
+    {{- if .FrontendHasVue}}
+    "@inertiajs/vue3": "{{.Version "@inertiajs/vue3"}}",
+    {{- end}}
+    {{- if .InertiaProvider}}
+    "@inertiajs/vite": "{{.Version "@inertiajs/vite"}}",
+    {{- end}}
     "axios": "{{.Version "axios"}}",
+    {{- if .FrontendHasReact}}
     "react": "{{.Version "react"}}",
     "react-dom": "{{.Version "react-dom"}}"
     {{- end}}
     {{- if .FrontendHasVue}}
-    "@inertiajs/vue3": "{{.Version "@inertiajs/vue3"}}",
-    "axios": "{{.Version "axios"}}",
     "vue": "{{.Version "vue"}}"
     {{- end}}
   }
