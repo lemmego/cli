@@ -162,11 +162,13 @@ func CreateDirIfNotExists(dirPath string) {
 func RunCommand(dirPath string, command string, args ...string) {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = dirPath
-	stdoutStderr, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Fatal(err)
+	output, err := cmd.CombinedOutput()
+	if len(output) > 0 {
+		fmt.Printf("%s\n", output)
 	}
-	fmt.Printf("%s\n", stdoutStderr)
+	if err != nil {
+		log.Fatalf("command %s %v failed: %v\n%s", command, args, err, output)
+	}
 }
 
 const scaffoldCacheDir = ".cache/lemmego/scaffold"

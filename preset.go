@@ -61,9 +61,9 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 	var moduleName string
 	var preset string
 	var orm string
-	var enableRedis bool
-	var enableAuth bool
-	var enableGPA bool
+	var enableRedis string
+	var enableAuth string
+	var enableGPA string
 
 	formFields := []huh.Field{
 		huh.NewInput().
@@ -89,23 +89,29 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 				huh.NewOption("Bun", "bun"),
 			).
 			Value(&orm),
-		huh.NewConfirm().
+		huh.NewSelect[string]().
 			Title("Enable Redis?").
-			Affirmative("Yes").
-			Negative("No").
+			Options(
+				huh.NewOption("Yes", "true"),
+				huh.NewOption("No", "false"),
+			).
 			Value(&enableRedis),
-		huh.NewConfirm().
+		huh.NewSelect[string]().
 			Title("Enable Auth?").
-			Affirmative("Yes").
-			Negative("No").
+			Options(
+				huh.NewOption("Yes", "true"),
+				huh.NewOption("No", "false"),
+			).
 			Value(&enableAuth),
 	}
 
 	if enableExperimental {
-		formFields = append(formFields, huh.NewConfirm().
+		formFields = append(formFields, huh.NewSelect[string]().
 			Title("Enable GPA? (experimental)").
-			Affirmative("Yes").
-			Negative("No").
+			Options(
+				huh.NewOption("Yes", "true"),
+				huh.NewOption("No", "false"),
+			).
 			Value(&enableGPA))
 	}
 
@@ -120,9 +126,9 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 	cfg.ModuleName = moduleName
 	cfg.Preset = ProjectPreset(preset)
 	cfg.ORM = OrmChoice(orm)
-	cfg.EnableRedis = enableRedis
-	cfg.EnableAuth = enableAuth
-	cfg.EnableGPA = enableGPA
+	cfg.EnableRedis = enableRedis == "true"
+	cfg.EnableAuth = enableAuth == "true"
+	cfg.EnableGPA = enableGPA == "true"
 
 	if cfg.Preset == PresetMVC {
 		var frontend string
