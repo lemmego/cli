@@ -9,9 +9,12 @@
     {{- if .FrontendHasVue}}
     "build:ssr": "vite build --ssr && node bootstrap/ssr/ssr.js",
     {{- end}}
+    "build:static": "npx @tailwindcss/cli -i static/css/style.css -o static/css/dist.css --minify",
+    "dev:static": "npx @tailwindcss/cli -i static/css/style.css -o static/css/dist.css --minify --watch",
     "preview": "vite preview"
   },
   "devDependencies": {
+    "@tailwindcss/cli": "{{.Version "@tailwindcss/cli"}}",
     "@tailwindcss/vite": "{{.Version "@tailwindcss/vite"}}",
     {{- if .FrontendHasReact}}
     "@types/react": "{{.Version "@types/react"}}",
