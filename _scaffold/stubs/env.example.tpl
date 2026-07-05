@@ -1,6 +1,7 @@
 APP_NAME=Lemmego
 APP_URL=http://localhost:8080
 APP_ENV=development
+APP_DEBUG=true
 APP_PORT=8080
 DB_CONNECTION=sqlite
 DB_DATABASE=./storage/database.sqlite

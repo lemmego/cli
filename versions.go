@@ -42,4 +42,4 @@ var DependencyVersions = map[string]string{
 // ScaffoldVersion is the embedded _scaffold/ directory version.
 // The CLI fetches a newer version from GitHub main branch if available.
 // Bump this when the scaffold content changes significantly.
-const ScaffoldVersion = "1.0.0"
+const ScaffoldVersion = "1.0.1"
