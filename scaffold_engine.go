@@ -2,6 +2,7 @@ package cli
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"os"
@@ -13,6 +14,7 @@ import (
 
 type templateData struct {
 	ProjectConfig
+	versions         map[string]string
 	SessionDriver    string
 	InertiaProvider  bool
 	FrontendHasTempl bool
@@ -22,11 +24,12 @@ type templateData struct {
 }
 
 func (td templateData) Version(pkg string) string {
-	v, ok := DependencyVersions[pkg]
-	if !ok {
-		return "latest"
+	if td.versions != nil {
+		if v, ok := td.versions[pkg]; ok {
+			return v
+		}
 	}
-	return v
+	return "latest"
 }
 
 // scaffoldSource bundles an fs.FS with its internal path prefix.
@@ -44,11 +47,27 @@ func resolveScaffoldSource() scaffoldSource {
 	return scaffoldSource{fs: scaffoldEmbedFS, prefix: "_scaffold"}
 }
 
+// loadVersions reads versions.json from the scaffold source.
+// Returns nil if unavailable (offline), so Version() falls back to "latest".
+func loadVersions(src scaffoldSource) map[string]string {
+	p := path.Join(src.prefix, "stubs", "versions.json")
+	data, err := fs.ReadFile(src.fs, p)
+	if err != nil {
+		return nil
+	}
+	var versions map[string]string
+	if err := json.Unmarshal(data, &versions); err != nil {
+		return nil
+	}
+	return versions
+}
+
 func ScaffoldProject(cfg ProjectConfig, destDir string) error {
 	fetchLatestScaffold()
 	src := resolveScaffoldSource()
 
 	td := buildTemplateData(cfg)
+	td.versions = loadVersions(src)
 	overlays := resolveOverlays(cfg)
 
 	fmt.Println("> Scaffolding project...")
