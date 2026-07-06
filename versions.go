@@ -9,7 +9,7 @@ var DependencyVersions = map[string]string{
 	"github.com/lemmego/gormconnector": "v0.1.2",
 	"github.com/lemmego/bunconnector":  "v0.1.1",
 	"github.com/lemmego/gpa":           "v0.1.1",
-	"github.com/lemmego/gpagorm":       "v0.1.5",
+	"github.com/lemmego/gpagorm":       "v0.1.6",
 	"github.com/lemmego/gpabun":        "v0.1.4",
 	"github.com/lemmego/inertia":       "v0.1.5",
 	"github.com/lemmego/migration":     "v0.1.14",
