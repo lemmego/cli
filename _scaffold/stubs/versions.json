@@ -11,7 +11,7 @@
   "github.com/lemmego/tasker": "v0.1.0",
   "github.com/lemmego/migration": "v0.1.15",
   "github.com/lemmego/fsys": "v0.1.0",
-  "github.com/lemmego/cli": "v0.1.39",
+  "github.com/lemmego/cli": "v0.1.40",
   "github.com/a-h/templ": "v0.3.943",
   "github.com/spf13/cobra": "v1.8.1",
   "react": "^19.0.0",
