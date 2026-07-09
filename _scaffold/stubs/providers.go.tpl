@@ -23,7 +23,7 @@ func LoadProviders() []app.Provider {
 	return []app.Provider{
 		&fs.Provider{},
 		&session.Provider{},
-		&queue.QueueProvider{},
+		&queue.Provider{},
 		{{- if .InertiaProvider}}
 		&inertia.Provider{
 			Options: []inertia.Option{
