@@ -9,7 +9,7 @@
   "github.com/lemmego/inertia": "v0.1.5",
   "github.com/lemmego/queue": "v0.1.0",
   "github.com/lemmego/tasker": "v0.1.0",
-  "github.com/lemmego/migration": "v0.1.14",
+  "github.com/lemmego/migration": "v0.1.15",
   "github.com/lemmego/fsys": "v0.1.0",
   "github.com/lemmego/cli": "v0.1.39",
   "github.com/a-h/templ": "v0.3.943",
