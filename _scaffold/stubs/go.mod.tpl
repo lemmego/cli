@@ -11,6 +11,7 @@ require (
 
 require (
 	github.com/lemmego/api {{.Version "github.com/lemmego/api"}}
+	github.com/lemmego/queue {{.Version "github.com/lemmego/queue"}}
 	{{- if .EnableAuth}}
 	github.com/lemmego/auth {{.Version "github.com/lemmego/auth"}}
 	{{- end}}
