@@ -15,7 +15,7 @@ var shouldRunInteractively = false
 var rootCmd = &cobra.Command{
 	Use:     "",
 	Short:   fmt.Sprintf("%s", os.Getenv("APP_NAME")),
-	Version: "0.1.40",
+	Version: "0.1.41",
 }
 
 // AddCmd adds a new sub-command to the root command.
@@ -40,6 +40,7 @@ func Execute() error {
 	AddCmd(buildCmd)
 	AddCmd(genCmd)
 	AddCmd(inertiaSSRCmd)
+	AddCmd(cacheCleanCmd)
 
 	return rootCmd.Execute()
 }
