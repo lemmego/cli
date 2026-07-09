@@ -14,27 +14,30 @@ import (
 const lemmegoIndicator = "github.com/lemmego/api/app"
 
 var runCmd = &cobra.Command{
-	Use:   "run [args]",
-	Short: "Run the Lemmego application with optional arguments",
+	Use:                "run [args]",
+	Short:              "Run the Lemmego application with optional arguments",
+	DisableFlagParsing: true,
 	Run: func(cmd *cobra.Command, args []string) {
 		if !isLemmegoProject() {
 			fmt.Println("Error: This does not appear to be a Lemmego project directory.")
 			return
 		}
 
-		// Build assets before running
-		if hasTemplFiles() {
-			EnsureBinary("templ")
-			fmt.Println("> Generating templ files...")
-			RunCommand(".", "templ", "generate")
-		}
-		if fileExists("package.json") {
-			EnsureBinary("node")
-			fmt.Println("> Building frontend assets...")
-			RunCommand(".", npmBinary(), "run", "build")
+		// Only build frontend assets for commands that serve HTTP
+		if needsFrontend(args) {
+			if hasTemplFiles() {
+				EnsureBinary("templ")
+				fmt.Println("> Generating templ files...")
+				RunCommand(".", "templ", "generate")
+			}
+			if fileExists("package.json") {
+				EnsureBinary("node")
+				fmt.Println("> Building frontend assets...")
+				RunCommand(".", npmBinary(), "run", "build")
+			}
 		}
 
-		// Run the application
+		// Run the application — args includes the subcommand and its flags
 		goRunCmd := exec.Command("go", append([]string{"run", "./cmd/app"}, args...)...)
 		goRunCmd.Stdout = os.Stdout
 		goRunCmd.Stderr = os.Stderr
@@ -43,6 +46,26 @@ var runCmd = &cobra.Command{
 			fmt.Printf("Error running the app: %v\n", err)
 		}
 	},
+}
+
+func needsFrontend(args []string) bool {
+	if len(args) == 0 {
+		return true
+	}
+	for _, a := range args {
+		if strings.HasPrefix(a, "-") {
+			continue
+		}
+		if strings.Contains(a, ":") {
+			return false
+		}
+		switch a {
+		case "inspire", "key", "migrate", "rollback":
+			return false
+		}
+		break
+	}
+	return true
 }
 
 // Function to check if the current directory is a Lemmego project
