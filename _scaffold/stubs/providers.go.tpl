@@ -4,6 +4,7 @@ import (
 	"github.com/lemmego/api/app"
 	"github.com/lemmego/api/providers/fs"
 	"github.com/lemmego/api/providers/session"
+	"github.com/lemmego/queue"
 	{{- if .InertiaProvider}}
 	"github.com/lemmego/inertia"
 	{{- end}}
@@ -22,6 +23,7 @@ func LoadProviders() []app.Provider {
 	return []app.Provider{
 		&fs.Provider{},
 		&session.Provider{},
+		&queue.QueueProvider{},
 		{{- if .InertiaProvider}}
 		&inertia.Provider{
 			Options: []inertia.Option{
