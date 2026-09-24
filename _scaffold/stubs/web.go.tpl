@@ -20,7 +20,7 @@ func WebRoutes(a app.App) {
 	r := a.Router()
 	r.Get("/{$}", func(c app.Context) error {
 		{{- if .InertiaProvider}}
-		return inertia.Respond(c, "IndexReact", nil)
+		return inertia.Respond(c, "{{if .FrontendHasVue}}IndexVue{{else}}IndexReact{{end}}", nil)
 		{{- else if .FrontendHasTempl}}
 		return templ.Respond(c, templates.BaseLayout(templates.Index()))
 		{{- else}}

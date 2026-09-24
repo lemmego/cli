@@ -1,6 +1,6 @@
 module github.com/lemmego/cli
 
-go 1.25.0
+go 1.27
 
 require (
 	github.com/charmbracelet/huh v1.0.0

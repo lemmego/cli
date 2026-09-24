@@ -3,6 +3,7 @@ APP_URL=http://localhost:8080
 APP_ENV=development
 APP_DEBUG=true
 APP_PORT=8080
+JWT_SECRET=
 DB_CONNECTION=sqlite
 DB_DATABASE=./storage/database.sqlite
 #DB_DRIVER=sqlite

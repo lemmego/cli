@@ -6,5 +6,5 @@ import (
 )
 
 func SQLRepo[T any](instanceName ...string) gpa.SQLRepository[T] {
-	return gpabun.GetRepository[T](instanceName...)
+	return gpabun.GetRepositoryByName[T](instanceName...)
 }

@@ -41,6 +41,9 @@ type scaffoldSource struct {
 // resolveScaffoldSource returns the scaffold source, preferring the cached
 // scaffold on disk over the embedded one.
 func resolveScaffoldSource() scaffoldSource {
+	if embeddedScaffoldOnly() {
+		return scaffoldSource{fs: scaffoldEmbedFS, prefix: "_scaffold"}
+	}
 	if dir := scaffoldDir(); dir != "" {
 		return scaffoldSource{fs: os.DirFS(dir), prefix: ""}
 	}
@@ -63,7 +66,9 @@ func loadVersions(src scaffoldSource) map[string]string {
 }
 
 func ScaffoldProject(cfg ProjectConfig, destDir string) error {
-	fetchLatestScaffold()
+	if !embeddedScaffoldOnly() {
+		fetchLatestScaffold()
+	}
 	src := resolveScaffoldSource()
 
 	td := buildTemplateData(cfg)
@@ -230,14 +235,14 @@ func applyOverlay(overlayPath string, destDir string, src scaffoldSource) error 
 
 func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) error {
 	stubs := map[string]string{
-		"bootstrap/providers.go":         "providers.go.tpl",
-		"bootstrap/routes.go":            "routes_bootstrap.go.tpl",
-		"bootstrap/middleware.go":         "middleware.go.tpl",
-		"internal/configs/database.go":   "database.go.tpl",
-		"internal/configs/session.go":    "session.go.tpl",
-		"cmd/app/main.go":                "main.go.tpl",
-		"go.mod":                         "go.mod.tpl",
-		".env.example":                   "env.example.tpl",
+		"bootstrap/providers.go":       "providers.go.tpl",
+		"bootstrap/routes.go":          "routes_bootstrap.go.tpl",
+		"bootstrap/middleware.go":      "middleware.go.tpl",
+		"internal/configs/database.go": "database.go.tpl",
+		"internal/configs/session.go":  "session.go.tpl",
+		"cmd/app/main.go":              "main.go.tpl",
+		"go.mod":                       "go.mod.tpl",
+		".env.example":                 "env.example.tpl",
 	}
 
 	if td.Preset == PresetMVC {
@@ -249,6 +254,7 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 	if td.Frontend.HasNodeDeps() {
 		stubs["pnpm-workspace.yaml"] = "pnpm-workspace.yaml.tpl"
 		stubs["package.json"] = "package.json.tpl"
+		stubs["tsconfig.json"] = "tsconfig.json.tpl"
 		stubs["vite.config.js"] = "vite.config.js.tpl"
 	}
 

@@ -4,6 +4,9 @@ import (
 	"github.com/lemmego/api/app"
 	"github.com/lemmego/api/providers/fs"
 	"github.com/lemmego/api/providers/session"
+	{{- if .EnableAuth}}
+	"github.com/lemmego/api/config"
+	{{- end}}
 	"github.com/lemmego/queue"
 	{{- if .InertiaProvider}}
 	"github.com/lemmego/inertia"
@@ -41,7 +44,7 @@ func LoadProviders() []app.Provider {
 		&auth.Provider{
 			Opts: &auth.Opts{
 				DisableSession: true,
-				JwtSecret:      "a-long-long-secret",
+				JwtSecret:      config.MustEnv("JWT_SECRET", ""),
 			},
 		},
 		{{- end}}

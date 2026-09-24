@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 // ScanStr scans the given input
@@ -123,21 +124,79 @@ func DirPath(dirname string) string {
 
 // EnsureEmptyDir ensures the directory in which the project should be created is empty
 func EnsureEmptyDir(dirname string) {
-	dirPath := DirPath(dirname)
-	// Check if directory exists
-	if _, err := os.Stat(dirPath); os.IsNotExist(err) {
-		// If directory doesn't exist, create it
-		fmt.Printf("> Creating new directory: %s\n", dirname)
-		if err := os.MkdirAll(dirPath, 0755); err != nil {
-			log.Fatal("Error creating directory:", err)
-		}
-	} else {
-		// Directory exists, check if it's empty
-		files, _ := filepath.Glob(filepath.Join(dirPath, "*"))
-		if len(files) > 0 {
-			log.Fatal("Error: The directory must be empty to create a new project.")
-		}
+	dirPath, err := validateDestination(dirname)
+	if err != nil {
+		log.Fatal(err)
 	}
+	created, err := validateDestinationContents(dirPath)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if created {
+		fmt.Printf("> Creating new directory: %s\n", dirname)
+	}
+}
+
+func validateDestinationContents(dirPath string) (bool, error) {
+	if _, err := os.Lstat(dirPath); os.IsNotExist(err) {
+		if err := os.MkdirAll(dirPath, 0755); err != nil {
+			return false, fmt.Errorf("creating destination: %w", err)
+		}
+		return true, nil
+	} else if err != nil {
+		return false, fmt.Errorf("checking destination: %w", err)
+	}
+
+	info, err := os.Stat(dirPath)
+	if err != nil {
+		return false, fmt.Errorf("checking destination: %w", err)
+	}
+	if !info.IsDir() {
+		return false, fmt.Errorf("the destination must be a directory")
+	}
+	entries, err := os.ReadDir(dirPath)
+	if err != nil {
+		return false, fmt.Errorf("reading destination: %w", err)
+	}
+	if len(entries) > 0 {
+		return false, fmt.Errorf("the directory must be empty to create a new project")
+	}
+	return false, nil
+}
+
+func validateDestination(dirname string) (string, error) {
+	if strings.TrimSpace(dirname) == "" {
+		return "", fmt.Errorf("destination must not be empty")
+	}
+	if filepath.IsAbs(dirname) || filepath.VolumeName(dirname) != "" {
+		return "", fmt.Errorf("destination must be a relative path")
+	}
+
+	clean := filepath.Clean(dirname)
+	if clean == "." || clean == ".." || strings.HasPrefix(clean, ".."+string(filepath.Separator)) {
+		return "", fmt.Errorf("destination must remain within the current directory")
+	}
+
+	dirPath := DirPath(clean)
+	current := DirPath("")
+	for _, component := range strings.Split(clean, string(filepath.Separator)) {
+		if component == "" {
+			continue
+		}
+		current = filepath.Join(current, component)
+		info, err := os.Lstat(current)
+		if err == nil {
+			if info.Mode()&os.ModeSymlink != 0 {
+				return "", fmt.Errorf("destination must not contain symbolic links")
+			}
+			continue
+		}
+		if os.IsNotExist(err) {
+			break
+		}
+		return "", fmt.Errorf("checking destination: %w", err)
+	}
+	return dirPath, nil
 }
 
 // HasDirectory returns true if a directory exists and false otherwise
@@ -176,6 +235,14 @@ const scaffoldRepoOwner = "lemmego"
 const scaffoldRepoName = "cli"
 const scaffoldRepoBranch = "main"
 
+var scaffoldHTTPClient = &http.Client{Timeout: 30 * time.Second}
+var scaffoldVersionURL = fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/_scaffold/VERSION", scaffoldRepoOwner, scaffoldRepoName, scaffoldRepoBranch)
+var scaffoldTarballURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s", scaffoldRepoOwner, scaffoldRepoName, scaffoldRepoBranch)
+
+func embeddedScaffoldOnly() bool {
+	return os.Getenv("LEMMEGO_SCAFFOLD_SOURCE") == "embedded"
+}
+
 // scaffoldCache returns the path to the local scaffold cache directory.
 func scaffoldCache() string {
 	home, err := os.UserHomeDir()
@@ -208,13 +275,14 @@ func fetchLatestScaffold() bool {
 	}
 
 	// Fetch remote VERSION
-	versionURL := fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/_scaffold/VERSION",
-		scaffoldRepoOwner, scaffoldRepoName, scaffoldRepoBranch)
-	resp, err := http.Get(versionURL)
+	resp, err := scaffoldHTTPClient.Get(scaffoldVersionURL)
 	if err != nil {
 		return false
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return false
+	}
 
 	remoteVersionBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -231,23 +299,28 @@ func fetchLatestScaffold() bool {
 	}
 
 	// Download tarball from GitHub
-	tarballURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/tarball/%s",
-		scaffoldRepoOwner, scaffoldRepoName, scaffoldRepoBranch)
-
-	req, err := http.NewRequest("GET", tarballURL, nil)
+	req, err := http.NewRequest("GET", scaffoldTarballURL, nil)
 	if err != nil {
 		return false
 	}
 	req.Header.Set("Accept", "application/vnd.github.v3.raw")
 
-	resp2, err := http.DefaultClient.Do(req)
+	resp2, err := scaffoldHTTPClient.Do(req)
 	if err != nil {
 		return false
 	}
 	defer resp2.Body.Close()
+	if resp2.StatusCode != http.StatusOK {
+		return false
+	}
 
-	// Extract to temp dir, then move _scaffold/ to cache
-	tmpDir, err := os.MkdirTemp("", "lemmego-scaffold-*")
+	cacheParent := filepath.Dir(cacheDir)
+	if err := os.MkdirAll(cacheParent, 0755); err != nil {
+		return false
+	}
+	// Stage the complete replacement beside the live cache so failed updates
+	// cannot remove or partially overwrite a usable cache.
+	tmpDir, err := os.MkdirTemp(cacheParent, ".scaffold-stage-*")
 	if err != nil {
 		return false
 	}
@@ -271,18 +344,31 @@ func fetchLatestScaffold() bool {
 		return false
 	}
 
-	// Move _scaffold/ into cache
-	os.RemoveAll(filepath.Join(cacheDir, "_scaffold"))
-	if err := os.MkdirAll(cacheDir, 0755); err != nil {
+	if !dirExists(filepath.Join(tmpDir, "_scaffold")) {
+		return false
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, "VERSION"), []byte(remoteVersion), 0644); err != nil {
 		return false
 	}
 
-	if err := CopyDir(filepath.Join(tmpDir, "_scaffold"), filepath.Join(cacheDir, "_scaffold")); err != nil {
+	backupDir := cacheDir + ".old"
+	_ = os.RemoveAll(backupDir)
+	hadCache := false
+	if _, err := os.Lstat(cacheDir); err == nil {
+		hadCache = true
+		if err := os.Rename(cacheDir, backupDir); err != nil {
+			return false
+		}
+	}
+	if err := os.Rename(tmpDir, cacheDir); err != nil {
+		if hadCache {
+			_ = os.Rename(backupDir, cacheDir)
+		}
 		return false
 	}
-
-	// Write VERSION
-	os.WriteFile(filepath.Join(cacheDir, "VERSION"), []byte(remoteVersion), 0644)
+	if hadCache {
+		_ = os.RemoveAll(backupDir)
+	}
 
 	return true
 }

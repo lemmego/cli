@@ -18,6 +18,9 @@ func User(a app.App) *UserRepository {
 }
 
 func (r *UserRepository) Create(ctx context.Context, user *models.User) error {
+	if err := user.BeforeCreate(ctx); err != nil {
+		return err
+	}
 	return r.db.WithContext(ctx).Create(user).Error
 }
 

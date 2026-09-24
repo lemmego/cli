@@ -6,5 +6,5 @@ import (
 )
 
 func SQLRepo[T any](instanceName ...string) gpa.MigratableRepository[T] {
-	return gpagorm.GetRepository[T](instanceName...)
+	return gpagorm.GetRepositoryByName[T](instanceName...)
 }

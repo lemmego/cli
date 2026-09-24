@@ -1,6 +1,6 @@
 module {{.ModuleName}}
 
-go 1.24.3
+go 1.27
 
 require (
 	{{- if .HasTempl}}

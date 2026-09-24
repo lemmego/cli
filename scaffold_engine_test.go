@@ -3,8 +3,15 @@ package cli
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
+
+func TestMain(m *testing.M) {
+	// Scaffold tests must always exercise the checked-in embedded fixtures.
+	_ = os.Setenv("LEMMEGO_SCAFFOLD_SOURCE", "embedded")
+	os.Exit(m.Run())
+}
 
 func TestBuildTemplateData(t *testing.T) {
 	cfg := ProjectConfig{
@@ -39,9 +46,9 @@ func TestBuildTemplateData(t *testing.T) {
 
 func TestBuildTemplateDataGoTemplates(t *testing.T) {
 	cfg := ProjectConfig{
-		Preset:    PresetMVC,
-		ORM:       OrmGORM,
-		Frontend:  FrontendGoTemplates,
+		Preset:   PresetMVC,
+		ORM:      OrmGORM,
+		Frontend: FrontendGoTemplates,
 	}
 	td := buildTemplateData(cfg)
 	if td.InertiaProvider {
@@ -87,8 +94,8 @@ func TestBuildTemplateDataTemplInertiaReact(t *testing.T) {
 
 func TestBuildTemplateDataRestAPI(t *testing.T) {
 	cfg := ProjectConfig{
-		Preset:   PresetRESTAPI,
-		ORM:      OrmGORM,
+		Preset: PresetRESTAPI,
+		ORM:    OrmGORM,
 	}
 	td := buildTemplateData(cfg)
 	if td.InertiaProvider {
@@ -139,10 +146,10 @@ func TestResolveOverlaysMVCDefault(t *testing.T) {
 
 func TestResolveOverlaysWithAuth(t *testing.T) {
 	cfg := ProjectConfig{
-		Preset:      PresetMVC,
-		ORM:         OrmGORM,
-		Frontend:    FrontendGoTemplates,
-		EnableAuth:  true,
+		Preset:     PresetMVC,
+		ORM:        OrmGORM,
+		Frontend:   FrontendGoTemplates,
+		EnableAuth: true,
 	}
 	overlays := resolveOverlays(cfg)
 	found := false
@@ -159,10 +166,10 @@ func TestResolveOverlaysWithAuth(t *testing.T) {
 
 func TestResolveOverlaysWithAuthBunGPA(t *testing.T) {
 	cfg := ProjectConfig{
-		Preset:      PresetRESTAPI,
-		ORM:         OrmBun,
-		EnableAuth:  true,
-		EnableGPA:   true,
+		Preset:     PresetRESTAPI,
+		ORM:        OrmBun,
+		EnableAuth: true,
+		EnableGPA:  true,
 	}
 	overlays := resolveOverlays(cfg)
 	found := false
@@ -211,6 +218,77 @@ func TestScaffoldProjectCreatesFiles(t *testing.T) {
 			t.Errorf("expected file %s was not created", f)
 		}
 	}
+}
+
+func TestScaffoldVueUsesVueEntryAndPage(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := ProjectConfig{
+		Name:       "vueapp",
+		ModuleName: "github.com/test/vueapp",
+		Preset:     PresetMVC,
+		ORM:        OrmGORM,
+		Frontend:   FrontendInertiaVue,
+	}
+
+	if err := ScaffoldProject(cfg, tmpDir); err != nil {
+		t.Fatal(err)
+	}
+
+	root := readScaffoldFile(t, tmpDir, "resources/views/root.html")
+	if !strings.Contains(root, `resources/js/app.js`) || strings.Contains(root, `resources/js/app.tsx`) {
+		t.Fatalf("Vue root has incorrect entry: %s", root)
+	}
+	routes := readScaffoldFile(t, tmpDir, "internal/routes/web.go")
+	if !strings.Contains(routes, `inertia.Respond(c, "IndexVue"`) || strings.Contains(routes, "IndexReact") {
+		t.Fatalf("Vue route has incorrect page: %s", routes)
+	}
+}
+
+func TestScaffoldNodePresetEmitsTSConfig(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := ProjectConfig{Preset: PresetMVC, ORM: OrmGORM, Frontend: FrontendInertiaVue}
+	if err := ScaffoldProject(cfg, tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	if content := readScaffoldFile(t, tmpDir, "tsconfig.json"); !strings.Contains(content, `"jsx": "preserve"`) {
+		t.Fatalf("expected Vue tsconfig, got: %s", content)
+	}
+}
+
+func TestScaffoldAlwaysImportsMigrations(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := ProjectConfig{Preset: PresetRESTAPI, ORM: OrmGORM}
+	if err := ScaffoldProject(cfg, tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	main := readScaffoldFile(t, tmpDir, "cmd/app/main.go")
+	if !strings.Contains(main, `_ "github.com/lemmego/lemmego/internal/migrations"`) {
+		t.Fatal("expected migrations import for projects without auth")
+	}
+	if _, err := os.Stat(filepath.Join(tmpDir, "internal/migrations/migrations.go")); err != nil {
+		t.Fatalf("expected base migrations package: %v", err)
+	}
+}
+
+func TestScaffoldAuthReadsJWTSecretFromEnvironment(t *testing.T) {
+	tmpDir := t.TempDir()
+	cfg := ProjectConfig{Preset: PresetRESTAPI, ORM: OrmGORM, EnableAuth: true}
+	if err := ScaffoldProject(cfg, tmpDir); err != nil {
+		t.Fatal(err)
+	}
+	providers := readScaffoldFile(t, tmpDir, "bootstrap/providers.go")
+	if !strings.Contains(providers, `config.MustEnv("JWT_SECRET", "")`) || strings.Contains(providers, "a-long-long-secret") {
+		t.Fatalf("JWT secret is not environment-backed: %s", providers)
+	}
+}
+
+func readScaffoldFile(t *testing.T, root, name string) string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join(root, name))
+	if err != nil {
+		t.Fatalf("read %s: %v", name, err)
+	}
+	return string(data)
 }
 
 func TestScaffoldProjectModuleRenamed(t *testing.T) {

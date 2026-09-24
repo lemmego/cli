@@ -5,9 +5,7 @@ import (
 	_ "github.com/lemmego/api/logger"
 	"github.com/lemmego/lemmego/bootstrap"
 	_ "github.com/lemmego/lemmego/internal/configs"
-	{{- if .EnableAuth}}
 	_ "github.com/lemmego/lemmego/internal/migrations"
-	{{- end}}
 )
 
 func main() {

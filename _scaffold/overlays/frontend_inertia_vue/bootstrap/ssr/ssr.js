@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-const http = require("http");
+import http from "node:http";
+
 const port = parseInt(process.env.PORT || "13714");
 const host = process.env.HOST || "127.0.0.1";
 
