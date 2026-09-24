@@ -11,6 +11,14 @@ import (
 )
 
 var enableExperimental bool
+var nonInteractive bool
+var projectModule string
+var projectPreset string
+var projectORM string
+var projectFrontend string
+var projectRedis bool
+var projectAuth bool
+var projectGPA bool
 
 var newCmd = &cobra.Command{
 	Use:     "new [dirname]",
@@ -18,13 +26,22 @@ var newCmd = &cobra.Command{
 	Short:   "Create an app",
 	Long:    `Create a new Lemmego app`,
 	Args:    cobra.ExactArgs(1),
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
 		dirname := args[0]
 		dirPath := DirPath(dirname)
 
-		cfg := collectProjectConfig(dirname, enableExperimental)
-		if cfg == nil {
-			return
+		var cfg *ProjectConfig
+		if nonInteractive {
+			var err error
+			cfg, err = collectNonInteractiveProjectConfig(dirname)
+			if err != nil {
+				return err
+			}
+		} else {
+			cfg = collectProjectConfig(dirname, enableExperimental)
+			if cfg == nil {
+				return nil
+			}
 		}
 
 		EnsureEmptyDir(dirname)
@@ -55,6 +72,7 @@ var newCmd = &cobra.Command{
 		fmt.Println("> Navigate to your new project, and run:")
 		fmt.Println("cd", dirname)
 		fmt.Println("lemmego dev")
+		return nil
 	},
 }
 

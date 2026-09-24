@@ -55,6 +55,57 @@ type ProjectConfig struct {
 	Frontend    FrontendPreset
 }
 
+func collectNonInteractiveProjectConfig(dirname string) (*ProjectConfig, error) {
+	if projectModule == "" {
+		return nil, fmt.Errorf("--module is required with --non-interactive")
+	}
+
+	preset := ProjectPreset(projectPreset)
+	if preset == "" {
+		preset = PresetMVC
+	}
+	if preset != PresetMVC && preset != PresetRESTAPI {
+		return nil, fmt.Errorf("invalid --preset %q: use %q or %q", projectPreset, PresetMVC, PresetRESTAPI)
+	}
+
+	orm := OrmChoice(projectORM)
+	if orm == "" {
+		orm = OrmGORM
+	}
+	if orm != OrmGORM && orm != OrmBun {
+		return nil, fmt.Errorf("invalid --orm %q: use %q or %q", projectORM, OrmGORM, OrmBun)
+	}
+
+	frontend := FrontendPreset(projectFrontend)
+	if frontend == "" {
+		frontend = FrontendGoTemplates
+	}
+	if !isValidFrontendPreset(frontend) {
+		return nil, fmt.Errorf("invalid --frontend %q", projectFrontend)
+	}
+
+	return &ProjectConfig{
+		Name:        dirname,
+		ModuleName:  projectModule,
+		Preset:      preset,
+		ORM:         orm,
+		EnableRedis: projectRedis,
+		EnableAuth:  projectAuth,
+		EnableGPA:   projectGPA,
+		Frontend:    frontend,
+	}, nil
+}
+
+func isValidFrontendPreset(preset FrontendPreset) bool {
+	switch preset {
+	case FrontendGoTemplates, FrontendTempl, FrontendInertiaReact, FrontendInertiaVue,
+		FrontendTemplInertiaReact, FrontendTemplInertiaVue:
+		return true
+	default:
+		return false
+	}
+}
+
 func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfig {
 	cfg := ProjectConfig{Name: dirname}
 

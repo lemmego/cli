@@ -19,6 +19,17 @@ curl -fsSL https://raw.githubusercontent.com/lemmego/cli/refs/heads/main/install
 
 > A new project will be created in your current directory (must be an empty dir)
 
+For automation, use non-interactive flags:
+
+```sh
+lemmego new my-app --non-interactive \
+  --module github.com/username/my-app \
+  --preset mvc --orm gorm --frontend go_templates \
+  --auth --redis --gpa
+```
+
+The non-interactive defaults are `mvc`, `gorm`, and `go_templates`.
+
 ### Generate a handlers file:
 
 `lemmego g handlers post`
