@@ -6,5 +6,6 @@ import (
 )
 
 func SQLRepo[T any](instanceName ...string) gpa.SQLRepository[T] {
-	return gpabun.GetRepositoryByName[T](instanceName...)
+	provider := gpa.MustGet[*gpabun.Provider](instanceName...)
+	return provider.Repository[T]()
 }
