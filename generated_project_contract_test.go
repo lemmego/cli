@@ -219,6 +219,13 @@ func assertGeneratedModule(t *testing.T, root, moduleName string) {
 	if !strings.Contains(string(data), "module "+moduleName) {
 		t.Fatalf("go.mod does not declare module %s", moduleName)
 	}
+	mainData, err := os.ReadFile(filepath.Join(root, "cmd", "app", "main.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(mainData, []byte("app.WithConfig(config.GetAll())")) {
+		t.Fatal("generated app must pass global configuration to app.Configure")
+	}
 	if err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
