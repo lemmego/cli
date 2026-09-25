@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"go/format"
 	"io/fs"
 	"os"
 	"path"
@@ -102,7 +103,51 @@ func ScaffoldProject(cfg ProjectConfig, destDir string) error {
 		return fmt.Errorf("generating dynamic files: %w", err)
 	}
 
+	if err := formatGoFiles(destDir); err != nil {
+		return fmt.Errorf("formatting generated code: %w", err)
+	}
+
 	return nil
+}
+
+// formatGoFiles gofmts the generated tree.
+//
+// Scaffold sources are written against the template module path and rewritten
+// to the project's own, which reorders imports and leaves the result
+// unformatted. Formatting afterwards is the only place that can know the final
+// paths, and DEVELOPMENT.md requires generated projects to pass formatting.
+//
+// A file that fails to parse is left as it is rather than failing the whole
+// scaffold: a readable broken file is easier to diagnose than an aborted
+// generation.
+func formatGoFiles(destDir string) error {
+	return filepath.Walk(destDir, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			if name := info.Name(); name == "node_modules" || name == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if filepath.Ext(path) != ".go" {
+			return nil
+		}
+
+		source, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		formatted, err := format.Source(source)
+		if err != nil {
+			return nil
+		}
+		if bytes.Equal(source, formatted) {
+			return nil
+		}
+		return os.WriteFile(path, formatted, info.Mode().Perm())
+	})
 }
 
 func buildTemplateData(cfg ProjectConfig) templateData {
@@ -146,19 +191,11 @@ func resolveOverlays(cfg ProjectConfig) []string {
 	}
 
 	if cfg.EnableAuth {
-		if cfg.ORM == OrmGORM {
-			if cfg.EnableGPA {
-				overlays = append(overlays, "overlays/auth_gorm_gpa")
-			} else {
-				overlays = append(overlays, "overlays/auth_gorm")
-			}
-		} else {
-			if cfg.EnableGPA {
-				overlays = append(overlays, "overlays/auth_bun_gpa")
-			} else {
-				overlays = append(overlays, "overlays/auth_bun")
-			}
+		overlay := "overlays/auth_" + string(cfg.ORM)
+		if cfg.EnableGPA {
+			overlay += "_gpa"
 		}
+		overlays = append(overlays, overlay)
 	}
 
 	return overlays

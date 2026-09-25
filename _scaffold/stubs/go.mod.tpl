@@ -15,6 +15,10 @@ require (
 	{{- if .EnableAuth}}
 	github.com/lemmego/auth {{.Version "github.com/lemmego/auth"}}
 	{{- end}}
+	{{- if eq .ORM "orm"}}
+	github.com/lemmego/orm {{.Version "github.com/lemmego/orm"}}
+	github.com/lemmego/ormconnector {{.Version "github.com/lemmego/ormconnector"}}
+	{{- end}}
 	{{- if eq .ORM "gorm"}}
 	github.com/lemmego/gormconnector {{.Version "github.com/lemmego/gormconnector"}}
 	{{- end}}
@@ -22,6 +26,9 @@ require (
 	github.com/lemmego/bunconnector {{.Version "github.com/lemmego/bunconnector"}}
 	{{- end}}
 	github.com/lemmego/gpa {{.Version "github.com/lemmego/gpa"}}
+	{{- if eq .ORM "orm"}}
+	github.com/lemmego/gpaorm {{.Version "github.com/lemmego/gpaorm"}}
+	{{- end}}
 	{{- if eq .ORM "gorm"}}
 	github.com/lemmego/gpagorm {{.Version "github.com/lemmego/gpagorm"}}
 	{{- end}}

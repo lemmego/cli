@@ -146,6 +146,12 @@ func renameModule(newModuleName string, dirPath string) {
 	if err != nil {
 		log.Fatal("Error replacing module name:", err)
 	}
+
+	// Rewriting the module path reorders imports, so the tree is formatted
+	// after the rename rather than before it.
+	if err := formatGoFiles(dirPath); err != nil {
+		log.Fatal("Error formatting generated code:", err)
+	}
 }
 
 func npmBinary() string {

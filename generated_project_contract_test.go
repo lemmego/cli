@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -243,5 +244,34 @@ func assertGeneratedModule(t *testing.T, root, moduleName string) {
 		return nil
 	}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// MySQL refuses a UNIQUE index on a TEXT/BLOB column without a key length
+// ("Error 1170 ... used in key specification without a key length"), so a
+// scaffolded project that indexes one cannot migrate there at all. Every
+// overlay had this on the users table, which made MySQL unusable for new
+// projects whichever ORM was chosen.
+func TestScaffoldMigrationsDoNotIndexTextColumns(t *testing.T) {
+	migrations, err := filepath.Glob(filepath.Join("_scaffold", "overlays", "*", "internal", "migrations", "*.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(migrations) == 0 {
+		t.Fatal("no overlay migrations found; the glob is wrong")
+	}
+
+	// t.Text("x").Unique() and t.Text("x").Primary() are both unindexable.
+	indexedText := regexp.MustCompile(`\.Text\((?:[^)]*)\)\.(Unique|Primary)\(\)`)
+
+	for _, path := range migrations {
+		source, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if match := indexedText.Find(source); match != nil {
+			t.Errorf("%s indexes a TEXT column (%s); use String(name, length) so MySQL can index it",
+				path, match)
+		}
 	}
 }

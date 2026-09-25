@@ -16,8 +16,11 @@ const (
 type OrmChoice string
 
 const (
-	OrmGORM OrmChoice = "gorm"
-	OrmBun  OrmChoice = "bun"
+	// OrmLemmego is the framework's own ORM and the default for new
+	// projects. GORM and Bun remain available for existing codebases.
+	OrmLemmego OrmChoice = "orm"
+	OrmGORM    OrmChoice = "gorm"
+	OrmBun     OrmChoice = "bun"
 )
 
 type FrontendPreset string
@@ -70,10 +73,10 @@ func collectNonInteractiveProjectConfig(dirname string) (*ProjectConfig, error) 
 
 	orm := OrmChoice(projectORM)
 	if orm == "" {
-		orm = OrmGORM
+		orm = OrmLemmego
 	}
-	if orm != OrmGORM && orm != OrmBun {
-		return nil, fmt.Errorf("invalid --orm %q: use %q or %q", projectORM, OrmGORM, OrmBun)
+	if orm != OrmLemmego && orm != OrmGORM && orm != OrmBun {
+		return nil, fmt.Errorf("invalid --orm %q: use %q, %q or %q", projectORM, OrmLemmego, OrmGORM, OrmBun)
 	}
 
 	frontend := FrontendPreset(projectFrontend)
@@ -136,6 +139,7 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 		huh.NewSelect[string]().
 			Title("Choose an SQL ORM").
 			Options(
+				huh.NewOption("Lemmego ORM", "orm"),
 				huh.NewOption("GORM", "gorm"),
 				huh.NewOption("Bun", "bun"),
 			).

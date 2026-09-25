@@ -11,6 +11,9 @@ import (
 	{{- if .InertiaProvider}}
 	"github.com/lemmego/inertia"
 	{{- end}}
+	{{- if eq .ORM "orm"}}
+	"github.com/lemmego/ormconnector"
+	{{- end}}
 	{{- if eq .ORM "gorm"}}
 	"github.com/lemmego/gormconnector"
 	{{- end}}
@@ -33,6 +36,9 @@ func LoadProviders() []app.Provider {
 				inertia.WithSSR(),
 			},
 		},
+		{{- end}}
+		{{- if eq .ORM "orm"}}
+		&ormconnector.Provider{{if .EnableGPA}}{UseGPA: true}{{else}}{}{{end}},
 		{{- end}}
 		{{- if eq .ORM "gorm"}}
 		&gormconnector.Provider{{if .EnableGPA}}{UseGPA: true}{{else}}{}{{end}},

@@ -28,10 +28,10 @@ func errorHandler(c app.Context, status int, page, title, defaultMsg string) err
 
 func LoadErrMap() app.ErrMap {
 	return app.ErrMap{
-		app.ErrUnauthorized:       func(c app.Context) error { return errorHandler(c, 401, "401.page.gohtml", "401", "Unauthorized") },
-		app.ErrForbidden:          func(c app.Context) error { return errorHandler(c, 403, "403.page.gohtml", "403", "Forbidden") },
-		app.ErrNotFound:           func(c app.Context) error { return errorHandler(c, 404, "404.page.gohtml", "404", "Not Found") },
-		app.ErrPageExpired:        func(c app.Context) error { return errorHandler(c, 419, "419.page.gohtml", "419", "Page Expired") },
+		app.ErrUnauthorized:        func(c app.Context) error { return errorHandler(c, 401, "401.page.gohtml", "401", "Unauthorized") },
+		app.ErrForbidden:           func(c app.Context) error { return errorHandler(c, 403, "403.page.gohtml", "403", "Forbidden") },
+		app.ErrNotFound:            func(c app.Context) error { return errorHandler(c, 404, "404.page.gohtml", "404", "Not Found") },
+		app.ErrPageExpired:         func(c app.Context) error { return errorHandler(c, 419, "419.page.gohtml", "419", "Page Expired") },
 		app.ErrInternalServerError: func(c app.Context) error { return errorHandler(c, 500, "500.page.gohtml", "500", "Server Error") },
 	}
 }
