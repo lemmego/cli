@@ -277,8 +277,14 @@ func TestScaffoldAuthReadsJWTSecretFromEnvironment(t *testing.T) {
 		t.Fatal(err)
 	}
 	providers := readScaffoldFile(t, tmpDir, "bootstrap/providers.go")
-	if !strings.Contains(providers, `config.MustEnv("JWT_SECRET", "")`) || strings.Contains(providers, "a-long-long-secret") {
+	if !strings.Contains(providers, `config.MustEnv("JWT_SECRET"`) || strings.Contains(providers, "a-long-long-secret") {
 		t.Fatalf("JWT secret is not environment-backed: %s", providers)
+	}
+	// An empty fallback leaves auth unable to verify anything, which reads as
+	// success: protected routes open up and the login page becomes
+	// unreachable. APP_KEY is always populated by `lemmego new`.
+	if !strings.Contains(providers, `config.MustEnv("APP_KEY", "")`) {
+		t.Fatalf("the JWT secret must fall back to APP_KEY: %s", providers)
 	}
 }
 

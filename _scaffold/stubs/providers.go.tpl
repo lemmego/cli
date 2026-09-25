@@ -50,7 +50,7 @@ func LoadProviders() []app.Provider {
 		&auth.Provider{
 			Opts: &auth.Opts{
 				DisableSession: true,
-				JwtSecret:      config.MustEnv("JWT_SECRET", ""),
+				JwtSecret:      config.MustEnv("JWT_SECRET", config.MustEnv("APP_KEY", "")),
 			},
 		},
 		{{- end}}

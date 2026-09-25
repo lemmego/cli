@@ -275,3 +275,46 @@ func TestScaffoldMigrationsDoNotIndexTextColumns(t *testing.T) {
 		}
 	}
 }
+
+// With sessions disabled, an empty JWT secret meant auth.Check() could verify
+// nothing and returned success: the protected area admitted anonymous visitors
+// and the login page redirected everyone away. The stub must fall back to
+// APP_KEY, which `lemmego new` always populates.
+func TestScaffoldAuthHasAJwtSecretFallback(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "providers.go.tpl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), `config.MustEnv("JWT_SECRET", config.MustEnv("APP_KEY", ""))`) {
+		t.Error("the auth provider must fall back to APP_KEY; an empty secret leaves protected routes open")
+	}
+	if strings.Contains(string(source), `config.MustEnv("JWT_SECRET", "")`) {
+		t.Error("JWT_SECRET must not default to an empty string")
+	}
+}
+
+// The app reads DB_CONNECTION but the migrate command reads DB_DRIVER, so a
+// commented-out DB_DRIVER makes `lemmego run migrate up` fail on a fresh
+// project with "driver is required".
+func TestScaffoldEnvSetsDBDriver(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "env.example.tpl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !regexp.MustCompile(`(?m)^DB_DRIVER=`).Match(source) {
+		t.Error("DB_DRIVER must be set, not commented out, or migrations fail out of the box")
+	}
+}
+
+// MustEnv falls back only when a variable is absent, so a present-but-empty
+// JWT_SECRET defeats the APP_KEY fallback and leaves auth unable to verify
+// anything.
+func TestScaffoldEnvDoesNotBlankJWTSecret(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "env.example.tpl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if regexp.MustCompile(`(?m)^JWT_SECRET=\s*$`).Match(source) {
+		t.Error("JWT_SECRET must be absent or populated, never set to an empty value")
+	}
+}
