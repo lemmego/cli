@@ -1,9 +1,20 @@
 package bootstrap
 
 import (
+	"net/http"
+
 	"github.com/lemmego/api/app"
 	"github.com/lemmego/api/res"
+	"github.com/lemmego/api/shared"
 )
+
+// isInertia reports whether the request came from Inertia, which requires an
+// Inertia-shaped response — a page or a redirect. A JSON or HTML error body
+// makes the client throw "All Inertia requests must receive a valid Inertia
+// response".
+func isInertia(c app.Context) bool {
+	return c.Header("X-Inertia") != ""
+}
 
 func errorHandler(c app.Context, status int, page, title, defaultMsg string) error {
 	c.SetStatus(status)
@@ -15,6 +26,18 @@ func errorHandler(c app.Context, status int, page, title, defaultMsg string) err
 				msg = he.GetHttpMessage().Message
 			}
 		}
+	}
+
+	// A redirect back is a valid Inertia response, and for an expired page it
+	// is also the useful one: the form re-renders with the message and the
+	// user can simply submit again, which is how Laravel handles 419.
+	//
+	// The status has to be a 3xx or the client will not follow it, so the
+	// error status set above is replaced with 303.
+	if isInertia(c) {
+		c.PutSession("errors", shared.ValidationErrors{"message": {msg}})
+		c.SetStatus(http.StatusSeeOther)
+		return c.Back()
 	}
 
 	if c.WantsJSON() {
