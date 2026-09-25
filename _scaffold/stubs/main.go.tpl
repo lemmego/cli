@@ -1,15 +1,33 @@
 package main
 
 import (
+	"log"
+	"os"
+
 	"github.com/lemmego/api/app"
 	"github.com/lemmego/api/config"
 	_ "github.com/lemmego/api/logger"
+	"github.com/lemmego/api/res"
 	"github.com/lemmego/lemmego/bootstrap"
 	_ "github.com/lemmego/lemmego/internal/configs"
 	_ "github.com/lemmego/lemmego/internal/migrations"
 )
 
+// templatesDir holds the page templates: the error pages every project ships,
+// and the views for the Go templates frontend.
+const templatesDir = "templates"
+
 func main() {
+	// The template cache is populated explicitly rather than on import, so
+	// that importing the package never depends on the working directory.
+	// Nothing did populate it, which left every .gohtml render failing with
+	// "not found in cache" — the error pages included.
+	if _, err := os.Stat(templatesDir); err == nil {
+		if err := res.LoadTemplates(templatesDir); err != nil {
+			log.Fatalf("loading templates from %s: %v", templatesDir, err)
+		}
+	}
+
 	webApp := app.Configure(app.WithConfig(config.GetAll()))
 
 	webApp.WithRoutes(bootstrap.LoadRoutes()).

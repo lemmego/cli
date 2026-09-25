@@ -318,3 +318,53 @@ func TestScaffoldEnvDoesNotBlankJWTSecret(t *testing.T) {
 		t.Error("JWT_SECRET must be absent or populated, never set to an empty value")
 	}
 }
+
+// The template cache is populated explicitly, so something has to call
+// LoadTemplates. Nothing did, which left every .gohtml render failing with
+// "template ... not found in cache" — the go_templates home page and the error
+// pages of every preset.
+func TestScaffoldLoadsTemplatesAtStartup(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "main.go.tpl"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(source), "res.LoadTemplates") {
+		t.Error("main must load the template cache, or every .gohtml render fails")
+	}
+}
+
+// A browser sends "text/html,...,*/*;q=0.8". The */* in that matches a JSON
+// check, so testing for JSON first served browsers a raw JSON body instead of
+// the error page.
+func TestScaffoldErrorPagesPreferHTML(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("_scaffold", "base", "bootstrap", "errmap.go"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	html := strings.Index(string(source), "c.WantsHTML()")
+	json := strings.Index(string(source), "c.WantsJSON()")
+	if html < 0 {
+		t.Fatal("the error handler must check WantsHTML")
+	}
+	if json >= 0 && json < html {
+		t.Error("WantsHTML must be checked before WantsJSON, or browsers receive JSON")
+	}
+}
+
+// templ generate writes the _templ.go files that make the templates directory
+// a Go package. Tidying before that runs leaves the project unable to resolve
+// its own import of it.
+func TestTemplGenerateRunsBeforeTidy(t *testing.T) {
+	source, err := os.ReadFile("new.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	generate := strings.Index(string(source), `RunCommand(dirPath, "templ", "generate")`)
+	tidy := strings.Index(string(source), "installGoModules(dirPath)")
+	if generate < 0 || tidy < 0 {
+		t.Fatal("expected both the templ generate and the module install steps")
+	}
+	if generate > tidy {
+		t.Error("templ generate must run before installGoModules")
+	}
+}

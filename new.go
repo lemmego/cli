@@ -60,13 +60,17 @@ var newCmd = &cobra.Command{
 			buildFrontend(dirPath)
 		}
 
-		installGoModules(dirPath)
-		generateAppKey(dirPath)
-
+		// templ generate has to run before the modules are tidied: it writes
+		// the _templ.go files that make templates a Go package, and without
+		// them tidy cannot resolve the project's own import of it.
 		if hasTemplGenerate(*cfg) {
 			fmt.Println("> Generating templ files...")
+			EnsureBinary("templ")
 			RunCommand(dirPath, "templ", "generate")
 		}
+
+		installGoModules(dirPath)
+		generateAppKey(dirPath)
 
 		fmt.Printf("\nSuccessfully created a new Lemmego app with module name: %s in directory: %s\n", cfg.ModuleName, dirname)
 		fmt.Println("> Navigate to your new project, and run:")

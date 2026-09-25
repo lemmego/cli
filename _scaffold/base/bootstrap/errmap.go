@@ -40,13 +40,17 @@ func errorHandler(c app.Context, status int, page, title, defaultMsg string) err
 		return c.Back()
 	}
 
-	if c.WantsJSON() {
-		return c.JSON(app.M{"error": msg, "status": status})
+	// HTML is checked first. A browser sends
+	// "text/html,...,*/*;q=0.8", and the */* in that matches a JSON check, so
+	// asking about JSON first served browsers a raw JSON body instead of the
+	// error page.
+	if c.WantsHTML() {
+		return c.Render(res.NewTemplate(c, page).WithData(map[string]any{
+			"title": title, "message": msg,
+		}))
 	}
 
-	return c.Render(res.NewTemplate(c, page).WithData(map[string]any{
-		"title": title, "message": msg,
-	}))
+	return c.JSON(app.M{"error": msg, "status": status})
 }
 
 func LoadErrMap() app.ErrMap {
