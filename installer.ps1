@@ -1,49 +1,79 @@
-# Determine the architecture
-$arch = (Get-WmiObject Win32_OperatingSystem).OSArchitecture
+# Installs the Lemmego CLI on Windows.
+#
+#   irm https://raw.githubusercontent.com/lemmego/cli/refs/heads/main/installer.ps1 | iex
+#
+# The version is resolved from the latest GitHub release, so this script does
+# not need editing when a new version ships. Override it to pin:
+#
+#   $env:LEMMEGO_VERSION = "v0.1.45"
+#   $env:LEMMEGO_INSTALL_DIR = "$env:LOCALAPPDATA\Programs\lemmego"
 
-# Function to download and install the binary
-function Install-Lemmego {
-    $downloadUrl = ""
-    $destinationPath = "C:\Windows\System32\lemmego.exe"
+$ErrorActionPreference = "Stop"
 
-    if ($arch -match "64-bit") {
-        if ($env:PROCESSOR_ARCHITEW6432 -eq "ARM64") {
-            $downloadUrl = "https://github.com/lemmego/cli/releases/download/v0.1.45/lemmego-v0.1.45-windows-arm64.exe"
-        } else {
-            $downloadUrl = "https://github.com/lemmego/cli/releases/download/v0.1.45/lemmego-v0.1.45-windows-amd64.exe"
-        }
-    } else {
-        Write-Host "Unsupported architecture: $arch"
-        exit 1
-    }
+$repo = "lemmego/cli"
+$installDir = if ($env:LEMMEGO_INSTALL_DIR) { $env:LEMMEGO_INSTALL_DIR } else { "C:\Windows\System32" }
+$destination = Join-Path $installDir "lemmego.exe"
 
-    if (-not $downloadUrl) {
-        Write-Host "Failed to determine the download URL for this platform."
-        exit 1
-    }
-
-    Write-Host "Downloading: $downloadUrl"
-    Invoke-WebRequest -Uri $downloadUrl -OutFile "lemmego.exe"
-
-    # Move the file to the System32 directory
-    Write-Host "Moving file to $destinationPath"
-    if (-not (Test-Path $destinationPath)) {
-        Move-Item -Path ".\lemmego.exe" -Destination $destinationPath
-        if ($?) {
-            Write-Host "Installation completed."
-        } else {
-            Write-Host "Failed to move the file to $destinationPath. Please check if you have administrator privileges."
-        }
-    } else {
-        Write-Host "File already exists at $destinationPath. Skipping move."
-    }
+# Resolve the architecture of the process' host, not the shell.
+$arch = switch ($env:PROCESSOR_ARCHITECTURE) {
+    "AMD64" { "amd64" }
+    "ARM64" { "arm64" }
+    "x86"   { if ($env:PROCESSOR_ARCHITEW6432 -eq "ARM64") { "arm64" } else { "amd64" } }
+    default { $null }
 }
-
-# Check if script is running with administrator privileges
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Host "This script requires administrator privileges. Please run PowerShell as an administrator."
+if (-not $arch) {
+    Write-Error "Unsupported architecture: $env:PROCESSOR_ARCHITECTURE"
     exit 1
 }
 
-# Run the installation
-Install-Lemmego
+$version = $env:LEMMEGO_VERSION
+if (-not $version) {
+    try {
+        $release = Invoke-RestMethod -Uri "https://api.github.com/repos/$repo/releases/latest" -UseBasicParsing
+        $version = $release.tag_name
+    } catch {
+        Write-Error "Could not determine the latest version. Set `$env:LEMMEGO_VERSION to install a specific one."
+        exit 1
+    }
+}
+
+$asset = "lemmego-$version-windows-$arch.exe"
+$baseUrl = "https://github.com/$repo/releases/download/$version"
+$tempFile = Join-Path ([System.IO.Path]::GetTempPath()) $asset
+
+Write-Host "Downloading $asset"
+try {
+    Invoke-WebRequest -Uri "$baseUrl/$asset" -OutFile $tempFile -UseBasicParsing
+} catch {
+    Write-Error "Download failed: $baseUrl/$asset"
+    exit 1
+}
+
+# Verify against the checksum published alongside the binary.
+try {
+    $expected = (Invoke-WebRequest -Uri "$baseUrl/$asset.md5" -UseBasicParsing).Content.Trim()
+    $actual = (Get-FileHash -Path $tempFile -Algorithm MD5).Hash.ToLower()
+    if ($actual -ne $expected.ToLower()) {
+        Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+        Write-Error "Checksum mismatch for $asset`n  expected $expected`n  actual   $actual"
+        exit 1
+    }
+} catch [System.Net.WebException] {
+    Write-Host "No checksum published for $asset; skipping verification."
+}
+
+Write-Host "Installing to $destination"
+try {
+    New-Item -ItemType Directory -Path $installDir -Force | Out-Null
+    # Force overwrites an existing binary. The previous version of this script
+    # skipped the move when the file already existed, so re-running it never
+    # upgraded an installation.
+    Move-Item -Path $tempFile -Destination $destination -Force
+} catch {
+    Remove-Item $tempFile -Force -ErrorAction SilentlyContinue
+    Write-Error "Failed to write $destination. Run this from an elevated prompt, or set `$env:LEMMEGO_INSTALL_DIR to a directory you own."
+    exit 1
+}
+
+Write-Host "Installation completed."
+& $destination --version
