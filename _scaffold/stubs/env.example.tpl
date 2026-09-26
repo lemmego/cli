@@ -16,6 +16,15 @@ DB_DRIVER=sqlite
 #DB_PASSWORD=
 FILESYSTEM_DISK=local
 SESSION_DRIVER={{.SessionDriver}}
+
+# file keeps the cache on disk so the CLI and the server share it; memory is
+# faster but private to one process, which leaves `cache:clear` unable to reach
+# the running server. redis is the only one that works across machines.
+CACHE_DRIVER={{if .EnableRedis}}redis{{else}}file{{end}}
+CACHE_TTL=3600
+{{- if .EnableRedis}}
+CACHE_REDIS_DB=1
+{{- end}}
 {{- if .EnableRedis}}
 REDIS_HOST=localhost
 REDIS_PORT=6379

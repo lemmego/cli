@@ -277,6 +277,7 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 		"bootstrap/middleware.go":      "middleware.go.tpl",
 		"internal/configs/database.go": "database.go.tpl",
 		"internal/configs/session.go":  "session.go.tpl",
+		"internal/configs/cache.go":    "cache.go.tpl",
 		"cmd/app/main.go":              "main.go.tpl",
 		"go.mod":                       "go.mod.tpl",
 		".env.example":                 "env.example.tpl",

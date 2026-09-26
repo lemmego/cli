@@ -208,6 +208,7 @@ func TestScaffoldProjectCreatesFiles(t *testing.T) {
 		"internal/configs/app.go",
 		"internal/configs/database.go",
 		"internal/configs/session.go",
+		"internal/configs/cache.go",
 		"internal/commands/appkey.go",
 		"internal/commands/inspire.go",
 	}

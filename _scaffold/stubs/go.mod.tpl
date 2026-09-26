@@ -38,5 +38,6 @@ require (
 	{{- if .InertiaProvider}}
 	github.com/lemmego/inertia {{.Version "github.com/lemmego/inertia"}}
 	{{- end}}
+	github.com/lemmego/cache {{.Version "github.com/lemmego/cache"}}
 	github.com/lemmego/migration {{.Version "github.com/lemmego/migration"}}
 )

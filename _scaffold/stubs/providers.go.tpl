@@ -7,6 +7,11 @@ import (
 	{{- if .EnableAuth}}
 	"github.com/lemmego/api/config"
 	{{- end}}
+	"github.com/lemmego/cache"
+	// Registers the memory, file, redis and null cache stores. Import only the
+	// ones you use instead if you want to keep a Redis client out of the
+	// binary.
+	_ "github.com/lemmego/cache/drivers"
 	"github.com/lemmego/queue"
 	{{- if .InertiaProvider}}
 	"github.com/lemmego/inertia"
@@ -29,6 +34,7 @@ func LoadProviders() []app.Provider {
 	return []app.Provider{
 		&fs.Provider{},
 		&session.Provider{},
+		&cache.Provider{},
 		&queue.Provider{},
 		{{- if .InertiaProvider}}
 		&inertia.Provider{
