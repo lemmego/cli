@@ -33,7 +33,7 @@ func NewHandlerGenerator(mc *HandlerConfig) *HandlerGenerator {
 }
 
 func (hg *HandlerGenerator) GetPackagePath() string {
-	return "internal/handlers"
+	return Paths().HandlerPath
 }
 
 func (hg *HandlerGenerator) GetStub() string {
@@ -61,6 +61,10 @@ func (hg *HandlerGenerator) Generate(appendable ...[]byte) error {
 	output, err := ParseTemplate(tmplData, hg.GetStub(), CommonFuncs)
 
 	if err != nil {
+		return err
+	}
+
+	if err := ensurePackageDir(fs, hg.GetPackagePath()); err != nil {
 		return err
 	}
 

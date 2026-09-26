@@ -81,12 +81,13 @@ func (mg *MigrationGenerator) BumpVersion() *MigrationGenerator {
 	return mg
 }
 
+// MIGRATIONS_DIR still wins, because it is what the migrate command itself
+// reads — the two have to agree about where migrations live.
 func (mg *MigrationGenerator) GetPackagePath() string {
-	path := "internal/migrations"
 	if dir := os.Getenv("MIGRATIONS_DIR"); dir != "" {
-		path = dir
+		return dir
 	}
-	return path
+	return Paths().MigrationPath
 }
 
 func (mg *MigrationGenerator) GetStub() string {
@@ -121,6 +122,10 @@ func (mg *MigrationGenerator) Generate(appendable ...[]byte) error {
 	output, err := ParseTemplate(tmplData, mg.GetStub(), CommonFuncs)
 
 	if err != nil {
+		return err
+	}
+
+	if err := ensurePackageDir(fs, mg.GetPackagePath()); err != nil {
 		return err
 	}
 

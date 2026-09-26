@@ -117,8 +117,10 @@ func NewModelGenerator(mc *ModelConfig) *ModelGenerator {
 	return &ModelGenerator{mc.Name, mc.Fields}
 }
 
+// GetPackagePath is where this project keeps its models, which it may have
+// moved. Asking rather than assuming is what makes model_path mean something.
 func (mg *ModelGenerator) GetPackagePath() string {
-	return "internal/models"
+	return Paths().ModelPath
 }
 
 func (mg *ModelGenerator) GetStub() string {

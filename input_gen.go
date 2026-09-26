@@ -43,7 +43,7 @@ func NewInputGenerator(mc *InputConfig) *InputGenerator {
 }
 
 func (ig *InputGenerator) GetPackagePath() string {
-	return "internal/inputs"
+	return Paths().InputPath
 }
 
 func (ig *InputGenerator) GetStub() string {
@@ -72,6 +72,10 @@ func (ig *InputGenerator) Generate(appendable ...[]byte) error {
 	output, err := ParseTemplate(tmplData, ig.GetStub(), CommonFuncs)
 
 	if err != nil {
+		return err
+	}
+
+	if err := ensurePackageDir(fs, ig.GetPackagePath()); err != nil {
 		return err
 	}
 
