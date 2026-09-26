@@ -269,3 +269,65 @@ func treeContains(t *testing.T, dir, needle string) bool {
 	})
 	return found
 }
+
+// Providers run one at a time in the order LoadProviders lists them, and a
+// provider can only resolve services the ones before it registered. The
+// database connector publishes the connection under db.Connection, so it has
+// to precede anything that might want to store something in it — the queue
+// above all, which used to open a second pool of its own precisely because
+// there was nothing to resolve.
+//
+// This is invisible at compile time and only shows up as a subsystem quietly
+// falling back at runtime, so it is pinned here.
+func TestConnectorPrecedesItsConsumers(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		cfg  ProjectConfig
+	}{
+		{"lemmego orm", ProjectConfig{
+			ModuleName: "example.com/order-orm", SQLDriver: SQLSQLite, ORM: OrmLemmego,
+			CacheDriver: CacheMemory, QueueDriver: QueueSQL,
+		}},
+		{"gorm with gpa", ProjectConfig{
+			ModuleName: "example.com/order-gorm", SQLDriver: SQLPostgres, ORM: OrmGORM,
+			EnableGPA: true, CacheDriver: CacheRedis, QueueDriver: QueueRedis,
+		}},
+		{"bun", ProjectConfig{
+			ModuleName: "example.com/order-bun", SQLDriver: SQLMySQL, ORM: OrmBun,
+			CacheDriver: CacheFile, QueueDriver: QueueSQL,
+		}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := ScaffoldProject(tt.cfg, dir); err != nil {
+				t.Fatalf("ScaffoldProject() error = %v", err)
+			}
+			source, err := os.ReadFile(filepath.Join(dir, "bootstrap", "providers.go"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			providers := string(source)
+
+			connector := -1
+			for _, name := range []string{"ormconnector.Provider", "gormconnector.Provider", "bunconnector.Provider"} {
+				if at := strings.Index(providers, "&"+name); at >= 0 {
+					connector = at
+					break
+				}
+			}
+			if connector < 0 {
+				t.Fatal("no database connector was written despite a SQL driver being selected")
+			}
+
+			for _, consumer := range []string{"&queue.Provider{", "&cache.Provider{"} {
+				at := strings.Index(providers, consumer)
+				if at < 0 {
+					t.Fatalf("%s was not written", consumer)
+				}
+				if at < connector {
+					t.Errorf("%s is listed before the database connector; it cannot resolve db.Connection", consumer)
+				}
+			}
+		})
+	}
+}

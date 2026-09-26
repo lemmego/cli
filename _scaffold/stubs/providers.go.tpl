@@ -32,10 +32,27 @@ import (
 	{{- end}}
 )
 
+// LoadProviders lists the providers the application boots, in order.
+//
+// Order matters. Providers run one at a time, in this order, and a provider
+// can only resolve services the ones before it registered. The database
+// connector therefore comes first among the providers that own resources:
+// it publishes the connection under db.Connection, which is how any package
+// that needs to store something finds this application's pool instead of
+// opening a second one of its own.
 func LoadProviders() []app.Provider {
 	return []app.Provider{
 		&fs.Provider{},
 		&session.Provider{},
+		{{- if .UseORMConnector}}
+		&ormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
+		{{- end}}
+		{{- if .UseGormConnector}}
+		&gormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
+		{{- end}}
+		{{- if .UseBunConnector}}
+		&bunconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
+		{{- end}}
 		{{- if .HasCache}}
 		&cache.Provider{},
 		{{- end}}
@@ -48,15 +65,6 @@ func LoadProviders() []app.Provider {
 				inertia.WithSSR(),
 			},
 		},
-		{{- end}}
-		{{- if .UseORMConnector}}
-		&ormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
-		{{- end}}
-		{{- if .UseGormConnector}}
-		&gormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
-		{{- end}}
-		{{- if .UseBunConnector}}
-		&bunconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
 		{{- end}}
 		{{- if .EnableAuth}}
 		&auth.Provider{
