@@ -276,33 +276,81 @@ func TestScaffoldMigrationsDoNotIndexTextColumns(t *testing.T) {
 	}
 }
 
+// These assert on a generated project rather than on the template that
+// produced it. Once a value sits behind a conditional, grepping the template
+// stops proving that any project actually gets it — the string is present
+// whether or not it is ever emitted.
+
+// scaffoldForContract generates a project and returns its root.
+func scaffoldForContract(t *testing.T, cfg ProjectConfig) string {
+	t.Helper()
+	dir := t.TempDir()
+	if err := ScaffoldProject(cfg, dir); err != nil {
+		t.Fatalf("ScaffoldProject() error = %v", err)
+	}
+	return dir
+}
+
+func readGenerated(t *testing.T, dir, name string) string {
+	t.Helper()
+	body, err := os.ReadFile(filepath.Join(dir, name))
+	if err != nil {
+		t.Fatalf("reading %s: %v", name, err)
+	}
+	return string(body)
+}
+
 // With sessions disabled, an empty JWT secret meant auth.Check() could verify
 // nothing and returned success: the protected area admitted anonymous visitors
-// and the login page redirected everyone away. The stub must fall back to
+// and the login page redirected everyone away. The provider must fall back to
 // APP_KEY, which `lemmego new` always populates.
 func TestScaffoldAuthHasAJwtSecretFallback(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "providers.go.tpl"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(source), `config.MustEnv("JWT_SECRET", config.MustEnv("APP_KEY", ""))`) {
+	dir := scaffoldForContract(t, ProjectConfig{
+		ModuleName: "example.com/auth", Preset: PresetRESTAPI,
+		SQLDriver: SQLSQLite, EnableAuth: true,
+	})
+
+	providers := readGenerated(t, dir, "bootstrap/providers.go")
+	if !strings.Contains(providers, `config.MustEnv("JWT_SECRET", config.MustEnv("APP_KEY", ""))`) {
 		t.Error("the auth provider must fall back to APP_KEY; an empty secret leaves protected routes open")
 	}
-	if strings.Contains(string(source), `config.MustEnv("JWT_SECRET", "")`) {
+	if strings.Contains(providers, `config.MustEnv("JWT_SECRET", "")`) {
 		t.Error("JWT_SECRET must not default to an empty string")
 	}
 }
 
 // The app reads DB_CONNECTION but the migrate command reads DB_DRIVER, so a
-// commented-out DB_DRIVER makes `lemmego run migrate up` fail on a fresh
-// project with "driver is required".
+// missing DB_DRIVER makes `lemmego run migrate up` fail on a fresh project
+// with "driver is required".
 func TestScaffoldEnvSetsDBDriver(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "env.example.tpl"))
-	if err != nil {
-		t.Fatal(err)
+	for _, driver := range []SQLDriver{SQLSQLite, SQLMySQL, SQLPostgres} {
+		t.Run(string(driver), func(t *testing.T) {
+			dir := scaffoldForContract(t, ProjectConfig{
+				ModuleName: "example.com/db", Preset: PresetRESTAPI, SQLDriver: driver,
+			})
+
+			env := readGenerated(t, dir, ".env.example")
+			if !regexp.MustCompile(`(?m)^DB_DRIVER=` + string(driver) + `$`).MatchString(env) {
+				t.Errorf("DB_DRIVER=%s must be set, or migrations fail out of the box:\n%s", driver, env)
+			}
+			if !regexp.MustCompile(`(?m)^DB_CONNECTION=` + driver.ConnectionName() + `$`).MatchString(env) {
+				t.Errorf("DB_CONNECTION=%s is missing:\n%s", driver.ConnectionName(), env)
+			}
+		})
 	}
-	if !regexp.MustCompile(`(?m)^DB_DRIVER=`).Match(source) {
-		t.Error("DB_DRIVER must be set, not commented out, or migrations fail out of the box")
+}
+
+// A project with no database must carry no database settings at all, rather
+// than settings pointing at something that is not there.
+func TestScaffoldEnvOmitsDatabaseSettingsWithoutADatabase(t *testing.T) {
+	dir := scaffoldForContract(t, ProjectConfig{
+		ModuleName: "example.com/nodb", Preset: PresetRESTAPI, SQLDriver: SQLNone,
+		CacheDriver: CacheNone, QueueDriver: QueueNone,
+	})
+
+	env := readGenerated(t, dir, ".env.example")
+	if regexp.MustCompile(`(?m)^DB_`).MatchString(env) {
+		t.Errorf("a project without a database carries DB_ settings:\n%s", env)
 	}
 }
 
@@ -310,11 +358,12 @@ func TestScaffoldEnvSetsDBDriver(t *testing.T) {
 // JWT_SECRET defeats the APP_KEY fallback and leaves auth unable to verify
 // anything.
 func TestScaffoldEnvDoesNotBlankJWTSecret(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "env.example.tpl"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if regexp.MustCompile(`(?m)^JWT_SECRET=\s*$`).Match(source) {
+	dir := scaffoldForContract(t, ProjectConfig{
+		ModuleName: "example.com/jwt", Preset: PresetRESTAPI, SQLDriver: SQLSQLite, EnableAuth: true,
+	})
+
+	env := readGenerated(t, dir, ".env.example")
+	if regexp.MustCompile(`(?m)^JWT_SECRET=\s*$`).MatchString(env) {
 		t.Error("JWT_SECRET must be absent or populated, never set to an empty value")
 	}
 }
@@ -324,11 +373,11 @@ func TestScaffoldEnvDoesNotBlankJWTSecret(t *testing.T) {
 // "template ... not found in cache" — the go_templates home page and the error
 // pages of every preset.
 func TestScaffoldLoadsTemplatesAtStartup(t *testing.T) {
-	source, err := os.ReadFile(filepath.Join("_scaffold", "stubs", "main.go.tpl"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if !strings.Contains(string(source), "res.LoadTemplates") {
+	dir := scaffoldForContract(t, ProjectConfig{
+		ModuleName: "example.com/tmpl", Preset: PresetMVC, Frontend: FrontendGoTemplates,
+	})
+
+	if !strings.Contains(readGenerated(t, dir, "cmd/app/main.go"), "res.LoadTemplates") {
 		t.Error("main must load the template cache, or every .gohtml render fails")
 	}
 }

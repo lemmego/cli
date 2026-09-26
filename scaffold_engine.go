@@ -14,9 +14,15 @@ import (
 )
 
 type templateData struct {
+	// ProjectConfig is embedded, so every choice and predicate on it is
+	// reachable from a template as {{.CacheDriver}} or {{.HasDatabase}}.
+	//
+	// Nothing here may shadow one of its fields. SessionDriver used to be
+	// declared here as a string, which shadowed the embedded choice: the
+	// template read one value while the configuration held another.
 	ProjectConfig
+
 	versions         map[string]string
-	SessionDriver    string
 	InertiaProvider  bool
 	FrontendHasTempl bool
 	FrontendHasReact bool
@@ -67,6 +73,13 @@ func loadVersions(src scaffoldSource) map[string]string {
 }
 
 func ScaffoldProject(cfg ProjectConfig, destDir string) error {
+	// Fill in whatever the caller left unset, so a partially populated
+	// configuration scaffolds the same project as a fully specified one.
+	normalize(&cfg)
+	if err := validate(cfg); err != nil {
+		return err
+	}
+
 	if !embeddedScaffoldOnly() {
 		fetchLatestScaffold()
 	}
@@ -151,22 +164,24 @@ func formatGoFiles(destDir string) error {
 }
 
 func buildTemplateData(cfg ProjectConfig) templateData {
-	td := templateData{
+	normalize(&cfg)
+
+	return templateData{
 		ProjectConfig:    cfg,
-		SessionDriver:    "file",
 		InertiaProvider:  cfg.Frontend.HasInertia(),
 		HasTempl:         cfg.Frontend.HasTempl() || cfg.Preset == PresetRESTAPI,
 		FrontendHasTempl: cfg.Frontend.HasTempl(),
 		FrontendHasReact: cfg.Frontend == FrontendInertiaReact || cfg.Frontend == FrontendTemplInertiaReact,
 		FrontendHasVue:   cfg.Frontend == FrontendInertiaVue || cfg.Frontend == FrontendTemplInertiaVue,
 	}
-	if cfg.EnableRedis {
-		td.SessionDriver = "redis"
-	}
-	return td
 }
 
 func resolveOverlays(cfg ProjectConfig) []string {
+	// Normalize here too rather than relying on the caller. A configuration
+	// with unset fields would otherwise resolve different overlays than the
+	// same configuration after ScaffoldProject filled it in.
+	normalize(&cfg)
+
 	var overlays []string
 
 	if cfg.Preset == PresetMVC {
@@ -190,7 +205,12 @@ func resolveOverlays(cfg ProjectConfig) []string {
 		overlays = append(overlays, "overlays/rest_api")
 	}
 
-	if cfg.EnableAuth {
+	// The auth overlay scaffolds a model, repositories and a users-table
+	// migration that all resolve a database connection, so it follows the
+	// database rather than the auth flag alone. validate rejects that
+	// combination before reaching here; this is the second line of defence,
+	// and without it the overlay name would come out as "overlays/auth_none".
+	if cfg.EnableAuth && cfg.HasDatabase() {
 		overlay := "overlays/auth_" + string(cfg.ORM)
 		if cfg.EnableGPA {
 			overlay += "_gpa"
@@ -236,9 +256,14 @@ func copyBaseFiles(destDir string, src scaffoldSource) error {
 func applyOverlay(overlayPath string, destDir string, src scaffoldSource) error {
 	root := path.Join(src.prefix, overlayPath)
 
-	_, err := fs.Stat(src.fs, root)
-	if err != nil {
-		return nil
+	// An overlay that was named but is not in the scaffold means either a
+	// naming bug — the auth overlay path is assembled from the SQL layer — or
+	// a cached scaffold from a different CLI. Ignoring it produced a project
+	// missing its models, repositories and migrations that still scaffolded,
+	// formatted, and reported success; the failure surfaced much later as
+	// compile errors pointing somewhere else.
+	if _, err := fs.Stat(src.fs, root); err != nil {
+		return fmt.Errorf("overlay %s is not present in this scaffold: %w", overlayPath, err)
 	}
 
 	return fs.WalkDir(src.fs, root, func(p string, d fs.DirEntry, err error) error {
@@ -271,23 +296,39 @@ func applyOverlay(overlayPath string, destDir string, src scaffoldSource) error 
 }
 
 func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) error {
+	// A subsystem the project left out contributes no configuration file. The
+	// file is omitted by not naming it here, which is how the frontend and
+	// node stubs already work.
 	stubs := map[string]string{
-		"bootstrap/providers.go":       "providers.go.tpl",
-		"bootstrap/routes.go":          "routes_bootstrap.go.tpl",
-		"bootstrap/middleware.go":      "middleware.go.tpl",
-		"internal/configs/database.go": "database.go.tpl",
-		"internal/configs/session.go":  "session.go.tpl",
-		"internal/configs/cache.go":    "cache.go.tpl",
-		"cmd/app/main.go":              "main.go.tpl",
-		"go.mod":                       "go.mod.tpl",
-		".env.example":                 "env.example.tpl",
+		"bootstrap/providers.go":          "providers.go.tpl",
+		"bootstrap/routes.go":             "routes_bootstrap.go.tpl",
+		"bootstrap/middleware.go":         "middleware.go.tpl",
+		"internal/configs/session.go":     "session.go.tpl",
+		"internal/configs/filesystems.go": "filesystems.go.tpl",
+		"internal/routes/api.go":          "api.go.tpl",
+		"cmd/app/main.go":                 "main.go.tpl",
+		"go.mod":                          "go.mod.tpl",
+		".env.example":                    "env.example.tpl",
 	}
 
 	if td.Preset == PresetMVC {
 		stubs["internal/routes/web.go"] = "web.go.tpl"
 	}
-
-	stubs["internal/routes/api.go"] = "api.go.tpl"
+	if td.HasDatabase() {
+		stubs["internal/configs/database.go"] = "database.go.tpl"
+	}
+	if td.HasCache() {
+		stubs["internal/configs/cache.go"] = "cache.go.tpl"
+	}
+	if td.HasQueue() {
+		stubs["internal/configs/tasker.go"] = "tasker.go.tpl"
+	}
+	// One shared Redis connection, written when anything needs one. It lives
+	// in its own file rather than inside the database config, which a project
+	// without a database does not have.
+	if td.UsesRedis() {
+		stubs["internal/configs/keyvalue.go"] = "keyvalue.go.tpl"
+	}
 
 	if td.Frontend.HasNodeDeps() {
 		stubs["pnpm-workspace.yaml"] = "pnpm-workspace.yaml.tpl"

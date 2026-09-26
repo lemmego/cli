@@ -106,37 +106,68 @@ func TestBuildTemplateDataRestAPI(t *testing.T) {
 	}
 }
 
-func TestBuildTemplateDataSessionDriver(t *testing.T) {
-	cfg := ProjectConfig{
-		Preset:      PresetMVC,
-		ORM:         OrmGORM,
-		EnableRedis: true,
-		Frontend:    FrontendGoTemplates,
+// The session driver is now a choice rather than something derived from a
+// Redis toggle. That toggle was deciding the session driver, the cache driver
+// and whether the Redis connection block was written all at once, which is how
+// a project could select the Redis session driver and not have the connection
+// it reads.
+func TestBuildTemplateDataCarriesTheSessionDriver(t *testing.T) {
+	for _, driver := range []SessionDriver{SessionFile, SessionMemory, SessionRedis} {
+		td := buildTemplateData(ProjectConfig{
+			Preset:        PresetMVC,
+			ORM:           OrmGORM,
+			SessionDriver: driver,
+			Frontend:      FrontendGoTemplates,
+		})
+		if td.SessionDriver != driver {
+			t.Errorf("SessionDriver = %s, want %s", td.SessionDriver, driver)
+		}
 	}
-	td := buildTemplateData(cfg)
-	if td.SessionDriver != "redis" {
-		t.Errorf("expected redis session driver, got %s", td.SessionDriver)
-	}
+}
 
-	cfg2 := ProjectConfig{
-		Preset:      PresetMVC,
-		ORM:         OrmGORM,
-		EnableRedis: false,
-		Frontend:    FrontendGoTemplates,
+// An unset driver takes the default rather than the zero value, so a partially
+// populated configuration still scaffolds.
+func TestBuildTemplateDataFillsUnsetChoices(t *testing.T) {
+	td := buildTemplateData(ProjectConfig{Preset: PresetMVC})
+
+	if td.SessionDriver != SessionFile {
+		t.Errorf("SessionDriver = %q, want the default", td.SessionDriver)
 	}
-	td2 := buildTemplateData(cfg2)
-	if td2.SessionDriver != "file" {
-		t.Errorf("expected file session driver, got %s", td2.SessionDriver)
+	if td.CacheDriver != CacheFile {
+		t.Errorf("CacheDriver = %q, want the default", td.CacheDriver)
+	}
+	if td.SQLDriver != SQLSQLite {
+		t.Errorf("SQLDriver = %q, want the default", td.SQLDriver)
+	}
+}
+
+// The Redis connection block is written exactly when something reads it.
+func TestUsesRedisFollowsTheDrivers(t *testing.T) {
+	tests := []struct {
+		name string
+		cfg  ProjectConfig
+		want bool
+	}{
+		{"nothing on redis", ProjectConfig{CacheDriver: CacheFile, QueueDriver: QueueSQL, SessionDriver: SessionFile}, false},
+		{"cache only", ProjectConfig{CacheDriver: CacheRedis, QueueDriver: QueueSQL, SessionDriver: SessionFile}, true},
+		{"queue only", ProjectConfig{CacheDriver: CacheFile, QueueDriver: QueueRedis, SessionDriver: SessionFile}, true},
+		{"session only", ProjectConfig{CacheDriver: CacheFile, QueueDriver: QueueSQL, SessionDriver: SessionRedis}, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.cfg.UsesRedis(); got != tt.want {
+				t.Errorf("UsesRedis() = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }
 
 func TestResolveOverlaysMVCDefault(t *testing.T) {
 	cfg := ProjectConfig{
-		Preset:      PresetMVC,
-		ORM:         OrmGORM,
-		Frontend:    FrontendGoTemplates,
-		EnableRedis: false,
-		EnableAuth:  false,
+		Preset:     PresetMVC,
+		ORM:        OrmGORM,
+		Frontend:   FrontendGoTemplates,
+		EnableAuth: false,
 	}
 	overlays := resolveOverlays(cfg)
 	if len(overlays) == 0 {

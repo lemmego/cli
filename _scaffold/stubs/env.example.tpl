@@ -3,29 +3,49 @@ APP_URL=http://localhost:8080
 APP_ENV=development
 APP_DEBUG=true
 APP_PORT=8080
-# JWT_SECRET is commented out on purpose: MustEnv falls back only when the
-# variable is absent, so an empty value here would defeat the APP_KEY
-# fallback and leave auth unable to verify anything. Set it to override.
-#JWT_SECRET=
-DB_CONNECTION=sqlite
-DB_DATABASE=./storage/database.sqlite
-DB_DRIVER=sqlite
-#DB_HOST=localhost
-#DB_PORT=3306
-#DB_USERNAME=root
-#DB_PASSWORD=
-FILESYSTEM_DISK=local
-SESSION_DRIVER={{.SessionDriver}}
 
-# file keeps the cache on disk so the CLI and the server share it; memory is
-# faster but private to one process, which leaves `cache:clear` unable to reach
-# the running server. redis is the only one that works across machines.
-CACHE_DRIVER={{if .EnableRedis}}redis{{else}}file{{end}}
-CACHE_TTL=3600
-{{- if .EnableRedis}}
-CACHE_REDIS_DB=1
+# Left commented out on purpose. MustEnv falls back only when a variable is
+# absent, so setting this to an empty value would defeat the APP_KEY fallback
+# rather than leaving it in place.
+#JWT_SECRET=
+{{- if .HasDatabase}}
+
+# The application reads DB_CONNECTION; `lemmego run migrate` reads DB_DRIVER.
+# Both are needed.
+DB_CONNECTION={{.SQLDriver.ConnectionName}}
+DB_DRIVER={{.SQLDriver.DriverName}}
+{{- if eq .SQLDriver "sqlite"}}
+DB_DATABASE=./storage/database.sqlite
+{{- else}}
+DB_HOST=localhost
+DB_PORT={{.SQLDriver.DefaultPort}}
+DB_DATABASE=lemmego
+DB_USERNAME=
+DB_PASSWORD=
 {{- end}}
-{{- if .EnableRedis}}
+{{- end}}
+
+FILESYSTEM_DISK={{.FilesystemDisk}}
+{{- if eq .FilesystemDisk "s3"}}
+AWS_ACCESS_KEY_ID=
+AWS_SECRET_ACCESS_KEY=
+AWS_DEFAULT_REGION=us-east-1
+AWS_BUCKET=
+{{- end}}
+
+SESSION_DRIVER={{.SessionDriver}}
+{{- if .HasCache}}
+
+CACHE_DRIVER={{.CacheDriver}}
+CACHE_TTL=3600
+{{- end}}
+{{- if .HasQueue}}
+
+TASKER_DRIVER={{.QueueDriver}}
+{{- end}}
+{{- if .UsesRedis}}
+
+# One connection, shared by everything that uses Redis.
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=

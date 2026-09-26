@@ -13,6 +13,7 @@ func init() {
 				"root":   "storage",
 				"path":   "./storage",
 			},
+{{- if eq .FilesystemDisk "s3"}}
 			"s3": config.M{
 				"driver":   "s3",
 				"key":      config.MustEnv("AWS_ACCESS_KEY_ID", ""),
@@ -21,6 +22,7 @@ func init() {
 				"bucket":   config.MustEnv("AWS_BUCKET", ""),
 				"endpoint": config.MustEnv("AWS_ENDPOINT", ""),
 			},
+{{- end}}
 		},
 	})
 }

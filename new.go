@@ -12,13 +12,30 @@ import (
 
 var enableExperimental bool
 var nonInteractive bool
-var projectModule string
-var projectPreset string
-var projectORM string
-var projectFrontend string
-var projectRedis bool
-var projectAuth bool
-var projectGPA bool
+
+// projectFlagSet groups the flags `new` accepts.
+//
+// They are a struct rather than nine package-level variables so that adding
+// one does not mean editing every test's save-and-restore block, which is
+// what kept them from being added.
+type projectFlagSet struct {
+	Module   string
+	Preset   string
+	Frontend string
+
+	ORM      string
+	Database string
+	Cache    string
+	Queue    string
+	Session  string
+	Disk     string
+
+	Redis bool
+	Auth  bool
+	GPA   bool
+}
+
+var projectFlags projectFlagSet
 
 var newCmd = &cobra.Command{
 	Use:     "new [dirname]",

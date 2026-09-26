@@ -7,56 +7,62 @@ import (
 	"testing"
 )
 
-func TestCollectNonInteractiveProjectConfig(t *testing.T) {
-	oldModule, oldPreset, oldORM, oldFrontend := projectModule, projectPreset, projectORM, projectFrontend
-	oldRedis, oldAuth, oldGPA := projectRedis, projectAuth, projectGPA
-	t.Cleanup(func() {
-		projectModule, projectPreset, projectORM, projectFrontend = oldModule, oldPreset, oldORM, oldFrontend
-		projectRedis, projectAuth, projectGPA = oldRedis, oldAuth, oldGPA
-	})
+// withFlags sets the `new` flags for one test and restores them after. They
+// are one struct so that adding a flag does not mean editing this.
+func withFlags(t *testing.T, flags projectFlagSet) {
+	t.Helper()
+	previous := projectFlags
+	t.Cleanup(func() { projectFlags = previous })
+	projectFlags = flags
+}
 
-	projectModule = "github.com/example/app"
-	projectPreset = "mvc"
-	projectORM = "bun"
-	projectFrontend = "templ"
-	projectRedis = true
-	projectAuth = true
-	projectGPA = true
+func TestCollectNonInteractiveProjectConfig(t *testing.T) {
+	withFlags(t, projectFlagSet{
+		Module:   "github.com/example/app",
+		Preset:   "mvc",
+		ORM:      "bun",
+		Database: "mysql",
+		Frontend: "templ",
+		Cache:    "redis",
+		Queue:    "redis",
+		Session:  "redis",
+		Disk:     "s3",
+		Auth:     true,
+		GPA:      true,
+	})
 
 	cfg, err := collectNonInteractiveProjectConfig("app")
 	if err != nil {
 		t.Fatalf("collectNonInteractiveProjectConfig() error = %v", err)
 	}
-	if cfg.ModuleName != projectModule || cfg.Preset != PresetMVC || cfg.ORM != OrmBun || cfg.Frontend != FrontendTempl {
+	if cfg.ModuleName != "github.com/example/app" || cfg.Preset != PresetMVC ||
+		cfg.ORM != OrmBun || cfg.Frontend != FrontendTempl {
 		t.Fatalf("unexpected config: %+v", cfg)
 	}
-	if !cfg.EnableRedis || !cfg.EnableAuth || !cfg.EnableGPA {
+	if cfg.SQLDriver != SQLMySQL || cfg.CacheDriver != CacheRedis ||
+		cfg.QueueDriver != QueueRedis || cfg.SessionDriver != SessionRedis ||
+		cfg.FilesystemDisk != DiskS3 {
+		t.Fatalf("drivers not carried through: %+v", cfg)
+	}
+	if !cfg.EnableAuth || !cfg.EnableGPA {
 		t.Fatalf("expected optional features enabled: %+v", cfg)
 	}
 }
 
 func TestCollectNonInteractiveProjectConfigDefaultsAndValidation(t *testing.T) {
-	oldModule, oldPreset, oldORM, oldFrontend := projectModule, projectPreset, projectORM, projectFrontend
-	oldRedis, oldAuth, oldGPA := projectRedis, projectAuth, projectGPA
-	t.Cleanup(func() {
-		projectModule, projectPreset, projectORM, projectFrontend = oldModule, oldPreset, oldORM, oldFrontend
-		projectRedis, projectAuth, projectGPA = oldRedis, oldAuth, oldGPA
-	})
+	withFlags(t, projectFlagSet{Module: "github.com/example/app"})
 
-	projectModule, projectPreset, projectORM, projectFrontend = "github.com/example/app", "", "", ""
-	projectRedis, projectAuth, projectGPA = false, false, false
 	cfg, err := collectNonInteractiveProjectConfig("app")
 	if err != nil {
 		t.Fatalf("collectNonInteractiveProjectConfig() error = %v", err)
 	}
-	// New projects default to the framework's own ORM.
 	if cfg.Preset != PresetMVC || cfg.ORM != OrmLemmego || cfg.Frontend != FrontendGoTemplates {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 
-	// Every supported ORM is accepted, and nothing else is.
+	// Every supported value is accepted, and nothing else is.
 	for _, choice := range []OrmChoice{OrmLemmego, OrmGORM, OrmBun} {
-		projectModule, projectORM = "github.com/example/app", string(choice)
+		withFlags(t, projectFlagSet{Module: "github.com/example/app", ORM: string(choice)})
 		cfg, err := collectNonInteractiveProjectConfig("app")
 		if err != nil {
 			t.Fatalf("--orm %s was rejected: %v", choice, err)
@@ -65,13 +71,13 @@ func TestCollectNonInteractiveProjectConfigDefaultsAndValidation(t *testing.T) {
 			t.Fatalf("--orm %s resolved to %s", choice, cfg.ORM)
 		}
 	}
-	projectORM = "prisma"
+
+	withFlags(t, projectFlagSet{Module: "github.com/example/app", ORM: "prisma"})
 	if _, err := collectNonInteractiveProjectConfig("app"); err == nil {
 		t.Fatal("expected an unknown --orm to be rejected")
 	}
-	projectORM = ""
 
-	projectModule = ""
+	withFlags(t, projectFlagSet{})
 	if _, err := collectNonInteractiveProjectConfig("app"); err == nil {
 		t.Fatal("expected missing module error")
 	}

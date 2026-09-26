@@ -2,8 +2,6 @@ package cli
 
 import (
 	"fmt"
-
-	"github.com/charmbracelet/huh"
 )
 
 type ProjectPreset string
@@ -47,166 +45,133 @@ func (f FrontendPreset) HasNodeDeps() bool {
 	return f.HasInertia()
 }
 
+const OrmNone OrmChoice = "none"
+
+// ProjectConfig is every decision a new project makes.
+//
+// The zero value of each field means "use the default", which normalize fills
+// in, so a partially populated literal is a valid configuration.
 type ProjectConfig struct {
-	Name        string
-	ModuleName  string
-	Preset      ProjectPreset
-	ORM         OrmChoice
-	EnableRedis bool
-	EnableAuth  bool
-	EnableGPA   bool
-	Frontend    FrontendPreset
+	Name       string
+	ModuleName string
+	Preset     ProjectPreset
+	Frontend   FrontendPreset
+
+	ORM       OrmChoice
+	SQLDriver SQLDriver
+
+	CacheDriver    CacheDriver
+	QueueDriver    QueueDriver
+	SessionDriver  SessionDriver
+	FilesystemDisk FilesystemDisk
+
+	EnableAuth bool
+	EnableGPA  bool
 }
 
-func collectNonInteractiveProjectConfig(dirname string) (*ProjectConfig, error) {
-	if projectModule == "" {
-		return nil, fmt.Errorf("--module is required with --non-interactive")
-	}
+func (c ProjectConfig) HasDatabase() bool { return c.SQLDriver.Enabled() }
+func (c ProjectConfig) HasCache() bool    { return c.CacheDriver.Enabled() }
+func (c ProjectConfig) HasQueue() bool    { return c.QueueDriver.Enabled() }
 
-	preset := ProjectPreset(projectPreset)
-	if preset == "" {
-		preset = PresetMVC
-	}
-	if preset != PresetMVC && preset != PresetRESTAPI {
-		return nil, fmt.Errorf("invalid --preset %q: use %q or %q", projectPreset, PresetMVC, PresetRESTAPI)
-	}
-
-	orm := OrmChoice(projectORM)
-	if orm == "" {
-		orm = OrmLemmego
-	}
-	if orm != OrmLemmego && orm != OrmGORM && orm != OrmBun {
-		return nil, fmt.Errorf("invalid --orm %q: use %q, %q or %q", projectORM, OrmLemmego, OrmGORM, OrmBun)
-	}
-
-	frontend := FrontendPreset(projectFrontend)
-	if frontend == "" {
-		frontend = FrontendGoTemplates
-	}
-	if !isValidFrontendPreset(frontend) {
-		return nil, fmt.Errorf("invalid --frontend %q", projectFrontend)
-	}
-
-	return &ProjectConfig{
-		Name:        dirname,
-		ModuleName:  projectModule,
-		Preset:      preset,
-		ORM:         orm,
-		EnableRedis: projectRedis,
-		EnableAuth:  projectAuth,
-		EnableGPA:   projectGPA,
-		Frontend:    frontend,
-	}, nil
+// UsesRedis reports whether anything in the project needs a Redis connection,
+// and is the only condition under which the shared connection block is written.
+//
+// This replaced a standalone Redis toggle that was doing three unrelated jobs
+// at once — picking the session driver, picking the cache driver, and deciding
+// whether the connection block existed. That is why choosing the Redis session
+// driver in a project scaffolded without the toggle used to panic on the first
+// request: the driver was selected but the connection it reads was never
+// written. Deriving the block from the drivers makes that combination
+// impossible to express.
+func (c ProjectConfig) UsesRedis() bool {
+	return c.CacheDriver == CacheRedis ||
+		c.QueueDriver == QueueRedis ||
+		c.SessionDriver == SessionRedis
 }
 
-func isValidFrontendPreset(preset FrontendPreset) bool {
-	switch preset {
-	case FrontendGoTemplates, FrontendTempl, FrontendInertiaReact, FrontendInertiaVue,
-		FrontendTemplInertiaReact, FrontendTemplInertiaVue:
-		return true
-	default:
-		return false
+// One predicate per emission site, so a template never has to nest conditions.
+func (c ProjectConfig) UseORMConnector() bool  { return c.HasDatabase() && c.ORM == OrmLemmego }
+func (c ProjectConfig) UseGormConnector() bool { return c.HasDatabase() && c.ORM == OrmGORM }
+func (c ProjectConfig) UseBunConnector() bool  { return c.HasDatabase() && c.ORM == OrmBun }
+func (c ProjectConfig) UseGPA() bool           { return c.HasDatabase() && c.EnableGPA }
+
+// defaultProjectConfig is the single source of defaults.
+//
+// Both entry points start from it: the interactive form seeds its fields here
+// and the flag path fills in whatever was not passed. They used to disagree —
+// interactively the default was whichever option happened to be listed first,
+// and non-interactively it was a bool flag's zero value — so the same command
+// produced different projects depending on how it was invoked.
+func defaultProjectConfig(name string) ProjectConfig {
+	return ProjectConfig{
+		Name:           name,
+		Preset:         PresetMVC,
+		Frontend:       FrontendGoTemplates,
+		ORM:            OrmLemmego,
+		SQLDriver:      SQLSQLite,
+		CacheDriver:    CacheFile,
+		QueueDriver:    QueueSQL,
+		SessionDriver:  SessionFile,
+		FilesystemDisk: DiskLocal,
+		EnableAuth:     true,
+		EnableGPA:      false,
 	}
 }
 
-func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfig {
-	cfg := ProjectConfig{Name: dirname}
+// normalize fills unset fields from the defaults and resolves what one answer
+// implies about another.
+func normalize(c *ProjectConfig) {
+	d := defaultProjectConfig(c.Name)
 
-	var moduleName string
-	var preset string
-	var orm string
-	var enableRedis string
-	var enableAuth string
-	var enableGPA string
-
-	formFields := []huh.Field{
-		huh.NewInput().
-			Title("Module Name (e.g. github.com/username/repo)").
-			Value(&moduleName).
-			Validate(func(s string) error {
-				if s == "" {
-					return fmt.Errorf("module name is required")
-				}
-				return nil
-			}),
-		huh.NewSelect[string]().
-			Title("Preset").
-			Options(
-				huh.NewOption("MVC", "mvc"),
-				huh.NewOption("REST API", "rest_api"),
-			).
-			Value(&preset),
-		huh.NewSelect[string]().
-			Title("Choose an SQL ORM").
-			Options(
-				huh.NewOption("Lemmego ORM", "orm"),
-				huh.NewOption("GORM", "gorm"),
-				huh.NewOption("Bun", "bun"),
-			).
-			Value(&orm),
-		huh.NewSelect[string]().
-			Title("Enable Redis?").
-			Options(
-				huh.NewOption("Yes", "true"),
-				huh.NewOption("No", "false"),
-			).
-			Value(&enableRedis),
-		huh.NewSelect[string]().
-			Title("Enable Auth?").
-			Options(
-				huh.NewOption("Yes", "true"),
-				huh.NewOption("No", "false"),
-			).
-			Value(&enableAuth),
+	if c.Preset == "" {
+		c.Preset = d.Preset
+	}
+	if c.Frontend == "" {
+		c.Frontend = d.Frontend
+	}
+	if c.SQLDriver == "" {
+		c.SQLDriver = d.SQLDriver
+	}
+	if c.CacheDriver == "" {
+		c.CacheDriver = d.CacheDriver
+	}
+	if c.QueueDriver == "" {
+		c.QueueDriver = d.QueueDriver
+	}
+	if c.SessionDriver == "" {
+		c.SessionDriver = d.SessionDriver
+	}
+	if c.FilesystemDisk == "" {
+		c.FilesystemDisk = d.FilesystemDisk
+	}
+	if c.ORM == "" && c.SQLDriver.Enabled() {
+		c.ORM = d.ORM
 	}
 
-	if enableExperimental {
-		formFields = append(formFields, huh.NewSelect[string]().
-			Title("Enable GPA? (experimental)").
-			Options(
-				huh.NewOption("Yes", "true"),
-				huh.NewOption("No", "false"),
-			).
-			Value(&enableGPA))
+	// No database means no ORM and no GPA: the connector is what registers the
+	// connection, and GPA is registered by the connector.
+	if !c.SQLDriver.Enabled() {
+		c.ORM = OrmNone
+		c.EnableGPA = false
 	}
 
-	form1 := huh.NewForm(
-		huh.NewGroup(formFields...),
-	)
-
-	if err := form1.Run(); err != nil {
-		return nil
+	// A frontend preset is an MVC concept; a REST API has no pages.
+	if c.Preset != PresetMVC {
+		c.Frontend = FrontendGoTemplates
 	}
+}
 
-	cfg.ModuleName = moduleName
-	cfg.Preset = ProjectPreset(preset)
-	cfg.ORM = OrmChoice(orm)
-	cfg.EnableRedis = enableRedis == "true"
-	cfg.EnableAuth = enableAuth == "true"
-	cfg.EnableGPA = enableGPA == "true"
-
-	if cfg.Preset == PresetMVC {
-		var frontend string
-		form2 := huh.NewForm(
-			huh.NewGroup(
-				huh.NewSelect[string]().
-					Title("Choose a frontend preset").
-					Options(
-						huh.NewOption("Go Templates", "go_templates"),
-						huh.NewOption("Templ (Go Templates included)", "templ"),
-						huh.NewOption("Inertia (React)", "inertia_react"),
-						huh.NewOption("Inertia (Vue)", "inertia_vue"),
-						huh.NewOption("Templ + Inertia (React)", "templ_inertia_react"),
-						huh.NewOption("Templ + Inertia (Vue)", "templ_inertia_vue"),
-					).
-					Value(&frontend),
-			),
-		)
-		if err := form2.Run(); err != nil {
-			return nil
-		}
-		cfg.Frontend = FrontendPreset(frontend)
+// validate rejects combinations that would scaffold cleanly and then fail at
+// runtime.
+func validate(c ProjectConfig) error {
+	if c.QueueDriver == QueueSQL && !c.HasDatabase() {
+		return fmt.Errorf("a SQL queue needs a database: choose a database, or use the redis queue or none")
 	}
-
-	return &cfg
+	if c.EnableAuth && !c.HasDatabase() {
+		return fmt.Errorf("authentication needs a database: it scaffolds a users table, a migration and repositories that resolve the connection")
+	}
+	if c.EnableGPA && !c.HasDatabase() {
+		return fmt.Errorf("GPA needs a database: its provider is registered by the SQL connector")
+	}
+	return nil
 }
