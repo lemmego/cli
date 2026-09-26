@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{vite "resources/css/app.css"}}">
+    {{viteTags "resources/css/app.css"}}
     {{ .inertiaHead }}
 </head>
 
@@ -18,6 +18,6 @@
     window.__vite_plugin_react_preamble_installed__ = true
 </script>
 {{end}}
-<script type="module" src="{{vite "resources/js/app.tsx" }}"></script>
+{{viteTags "resources/js/app.tsx"}}
 </body>
 </html>
