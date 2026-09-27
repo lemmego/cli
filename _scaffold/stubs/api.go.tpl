@@ -29,8 +29,17 @@ func ApiRoutes(a app.App) {
 			return c.JSON(app.M{"message": "Logged out successfully"})
 		})
 
+		// UserAs is the typed accessor: the loader configured in
+		// bootstrap/providers.go put a *models.User on the context, so this
+		// reads back the application's own type rather than whatever shape
+		// the credential happened to have. It is false for a token that
+		// authenticates a machine and no user.
 		apiGroup.Get("/me", auth.Protected, func(c app.Context) error {
-			return app.M{"user": auth.AuthUser(c)}
+			user, ok := auth.UserAs[*models.User](c)
+			if !ok {
+				return c.Error(403, fmt.Errorf("this endpoint needs a user, not a client credential"))
+			}
+			return app.M{"user": user}
 		})
 
 		apiGroup.Post("/register", func(c app.Context) error {

@@ -2,16 +2,11 @@ package models
 
 import (
 	"context"
-	"encoding/gob"
 	"strconv"
 	"time"
 
 	"github.com/lemmego/api/utils"
 )
-
-func init() {
-	gob.Register(&User{})
-}
 
 type User struct {
 	ID        uint64 `json:"id" db:"id,omitempty"`
