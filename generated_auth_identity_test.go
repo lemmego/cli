@@ -27,6 +27,11 @@ func authCombinations() []ProjectConfig {
 				SQLDriver:  SQLSQLite,
 				EnableAuth: true,
 				EnableGPA:  gpa,
+				// A queue as well, because auth and the queue together are
+				// what emit the dashboard guard — the slices/strings imports
+				// and the taskerAdmins helper exist in no other combination,
+				// so without this they would never be compiled.
+				QueueDriver: QueueSQL,
 			})
 		}
 	}
@@ -165,5 +170,55 @@ func replaceLocalModules(t *testing.T, gocmd, root, monorepo string) {
 		if out, err := cmd.CombinedOutput(); err != nil {
 			t.Fatalf("go mod edit: %v\n%s", err, out)
 		}
+	}
+}
+
+// A project with a queue and authentication gets a dashboard rule it can
+// actually use. The rule must call auth.Check itself: the dashboard is
+// mounted as a raw http.Handler, so no router middleware runs for it and
+// nothing has looked at the cookie by the time the predicate is called.
+// Without that call the user is always absent and the dashboard refuses
+// everyone, including the people named in TASKER_ADMINS.
+func TestGeneratedQueueDashboardIsGuarded(t *testing.T) {
+	cfg := authCombinations()[0]
+	cfg.QueueDriver = QueueSQL
+	root := scaffoldContractProject(t, cfg)
+
+	providers := readGenerated(t, root, "bootstrap/providers.go")
+	if !strings.Contains(providers, "DashboardAuth:") {
+		t.Fatalf("the queue provider has no DashboardAuth, so the dashboard is unreachable:\n%s", providers)
+	}
+	if !strings.Contains(providers, "auth.Check(c)") {
+		t.Error("DashboardAuth does not call auth.Check, so it will refuse everyone")
+	}
+	if !strings.Contains(providers, "auth.UserAs[*models.User](c)") {
+		t.Error("DashboardAuth does not resolve the application's user type")
+	}
+
+	env := readGenerated(t, root, ".env.example")
+	if !strings.Contains(env, "TASKER_ADMINS") {
+		t.Error("TASKER_ADMINS is not documented in .env.example")
+	}
+}
+
+// Without authentication there is nobody to recognise, so the dashboard has
+// to stay closed rather than fall open.
+func TestGeneratedQueueDashboardStaysClosedWithoutAuth(t *testing.T) {
+	root := scaffoldContractProject(t, ProjectConfig{
+		Name:        "queuenoauth",
+		ModuleName:  "example.com/contracts/queuenoauth",
+		Preset:      PresetRESTAPI,
+		ORM:         OrmLemmego,
+		SQLDriver:   SQLSQLite,
+		QueueDriver: QueueSQL,
+		EnableAuth:  false,
+	})
+
+	providers := readGenerated(t, root, "bootstrap/providers.go")
+	if strings.Contains(providers, "DashboardAuth:") {
+		t.Error("a project with no authentication cannot express a dashboard rule")
+	}
+	if !strings.Contains(providers, "&queue.Provider{") {
+		t.Error("the queue provider is missing entirely")
 	}
 }

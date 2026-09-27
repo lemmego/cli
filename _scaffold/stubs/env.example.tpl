@@ -42,6 +42,12 @@ CACHE_TTL=3600
 {{- if .HasQueue}}
 
 TASKER_DRIVER={{.QueueDriver}}
+{{- if .EnableAuth}}
+# Who may open the queue dashboard: a comma-separated list of email
+# addresses. Empty means nobody, which is the safe default — the dashboard can
+# retry, cancel and delete jobs.
+TASKER_ADMINS=
+{{- end}}
 {{- end}}
 {{- if .UsesRedis}}
 
