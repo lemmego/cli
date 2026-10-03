@@ -2,9 +2,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build --ssr",
     {{- if .InertiaProvider}}
-    "build:ssr": "vite build --ssr && node bootstrap/ssr/ssr.js",
+    "build:ssr": "vite build --ssr",
+    "ssr": "node bootstrap/ssr/ssr.js",
     {{- end}}
     "build:static": "npx @tailwindcss/cli -i static/css/style.css -o static/css/dist.css --minify",
     "dev:static": "npx @tailwindcss/cli -i static/css/style.css -o static/css/dist.css --minify --watch",

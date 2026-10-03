@@ -10,6 +10,8 @@ pnpm-lock.yaml
 yarn.lock
 public/build
 public/hot
+# Vite writes the SSR bundle here; it is build output, not source.
+bootstrap/ssr/
 public/storage
 !public/.gitkeep
 storage/*

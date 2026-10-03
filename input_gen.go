@@ -33,6 +33,19 @@ type InputConfig struct {
 	Fields []*InputField
 }
 
+// HasUnique reports whether any field needs a uniqueness check, so the
+// template imports api/db only when it will use it. An unused import does not
+// compile, which is how the generator used to emit broken code in the other
+// direction.
+func (c InputConfig) HasUnique() bool {
+	for _, field := range c.Fields {
+		if field.Unique {
+			return true
+		}
+	}
+	return false
+}
+
 type InputGenerator struct {
 	name   string
 	fields []*InputField
@@ -63,6 +76,9 @@ func (ig *InputGenerator) Generate(appendable ...[]byte) error {
 		"PackageName": packageName,
 		"InputName":   ig.name,
 		"Fields":      ig.fields,
+		// The template imports api/db only when a field needs a uniqueness
+		// check, because an unused import does not compile.
+		"HasUnique": InputConfig{Fields: ig.fields}.HasUnique(),
 	}
 
 	if len(appendable) > 0 {

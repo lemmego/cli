@@ -2,6 +2,9 @@ package {{.PackageName}}
 
 import (
     "github.com/lemmego/api/app"
+    {{- if .HasUnique}}
+    "github.com/lemmego/api/db"
+    {{- end}}
     {{- range .Fields}}
       {{- if eq .Type "file"}}
     "github.com/ggicci/httpin"
@@ -35,13 +38,22 @@ func (i *{{.InputName | toCamel}}Input) Validate() error {
     v := i.ctx.Validator()
     {{- range .Fields}}
         {{- if and .Required .Unique}}
-    v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Required().Unique("{{.Table}}", "{{.Name | toSnake}}")
+    v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Required().
+        Check(db.Unique(i.ctx.App(), "{{.Table}}", "{{.Name | toSnake}}"))
         {{- else if .Required}}
     v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Required()
         {{- else if .Unique}}
-    v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).Unique("{{.Table}}", "{{.Name | toSnake}}")
+    v.Field("{{.Name | toSnake}}", i.{{.Name | toCamel}}).
+        Check(db.Unique(i.ctx.App(), "{{.Table}}", "{{.Name | toSnake}}"))
         {{- end}}
     {{- end}}
+    // Err is a rule that could not run — a failed uniqueness lookup, say —
+    // as opposed to a value the person can fix. Reporting it separately lets
+    // the caller answer 503 rather than telling someone their value is taken
+    // when the database is simply unreachable.
+    if err := v.Err(); err != nil {
+        return err
+    }
     return v.Validate()
 }
 

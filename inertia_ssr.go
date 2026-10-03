@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -49,11 +52,11 @@ var inertiaSSRStartCmd = &cobra.Command{
 			os.Remove(ssrPidFile)
 		}
 
-		nodeCmd := exec.Command("node", []string{
-			ssrPath,
-			"--port", strconv.Itoa(ssrPort),
-			"--host", ssrHost,
-		}...)
+		// No --port or --host: @inertiajs/core's SSR server reads neither.
+		// Its port is fixed when the bundle is built, by the vite plugin's
+		// inertia({ssr: {port}}) option, so passing them here only made the
+		// command look configurable.
+		nodeCmd := exec.Command("node", ssrPath)
 		nodeCmd.Stdout = os.Stdout
 		nodeCmd.Stderr = os.Stderr
 
@@ -110,23 +113,55 @@ var inertiaSSRStopCmd = &cobra.Command{
 
 var inertiaSSRCheckCmd = &cobra.Command{
 	Use:   "check",
-	Short: "Check if the Inertia SSR server is running",
+	Short: "Check that the Inertia SSR server can actually render",
 	Run: func(cmd *cobra.Command, args []string) {
-		pid, err := readPidFile()
-		if err != nil {
-			fmt.Println("SSR server is not running")
-			os.Exit(1)
-			return
-		}
-
-		if processRunning(pid) {
-			fmt.Printf("SSR server is running (PID %d)\n", pid)
-		} else {
+		// The process being alive is not the question. A Node process
+		// listening with a broken module graph passes a liveness check and
+		// fails every render — and because Inertia falls back to
+		// client-rendered HTML, the site answers 200 throughout. So this asks
+		// the server to render, which is the only thing that distinguishes
+		// working from listening.
+		if pid, err := readPidFile(); err == nil && !processRunning(pid) {
 			os.Remove(ssrPidFile)
 			fmt.Println("SSR server is not running")
 			os.Exit(1)
 		}
+
+		if err := probeSSR(ssrHost, ssrPort); err != nil {
+			fmt.Printf("SSR server is not rendering: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Printf("SSR server is rendering on http://%s:%d\n", ssrHost, ssrPort)
 	},
+}
+
+// probeSSR asks the render endpoint to render, and requires a body back.
+//
+// @inertiajs/core's server also serves /health, but that only reports that the
+// process is up — the same thing a port dial reports. Rendering is the
+// property worth checking.
+func probeSSR(host string, port int) error {
+	body := []byte(`{"component":"__inertia_probe__","props":{},"url":"/","version":"","encryptHistory":false,"clearHistory":false}`)
+	endpoint := fmt.Sprintf("http://%s:%d/render", host, port)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	response, err := client.Post(endpoint, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer response.Body.Close()
+
+	answer, err := io.ReadAll(io.LimitReader(response.Body, 1<<16))
+	if err != nil {
+		return err
+	}
+	if response.StatusCode != http.StatusOK {
+		return fmt.Errorf("the render endpoint answered %d", response.StatusCode)
+	}
+	if len(bytes.TrimSpace(answer)) == 0 {
+		return fmt.Errorf("the render endpoint answered with an empty body, so the SSR bundle is not loaded")
+	}
+	return nil
 }
 
 func readPidFile() (int, error) {
