@@ -417,3 +417,58 @@ func TestTemplGenerateRunsBeforeTidy(t *testing.T) {
 		t.Error("templ generate must run before installGoModules")
 	}
 }
+
+// A scaffolded Inertia entry point must typecheck.
+//
+// It did not: the generated app.tsx annotated createInertiaApp's setup argument
+// with a hand-written {el, App, props} type that does not match Inertia's own —
+// props is InertiaAppProps rather than Record<string, unknown>, and el is
+// nullable in two of the three overloads — so `tsc --noEmit` failed on the first
+// file of every new project. Vite strips types with esbuild and never
+// typechecks, so the build passed and nobody found out until they ran tsc.
+//
+// Asserted on shape rather than by running tsc, which would need node and an
+// npm install; the shape is what regressed and it is what this guards.
+func TestScaffoldInertiaEntriesAreTypecheckable(t *testing.T) {
+	for _, frontend := range []FrontendPreset{FrontendInertiaReact, FrontendTemplInertiaReact} {
+		t.Run(string(frontend), func(t *testing.T) {
+			root := scaffoldContractProject(t, ProjectConfig{
+				Name:       "contracttsc",
+				ModuleName: "example.com/contracts/tsc",
+				Preset:     PresetMVC,
+				ORM:        OrmGORM,
+				Frontend:   frontend,
+			})
+
+			for _, entry := range []string{"resources/js/app.tsx", "resources/js/ssr.tsx"} {
+				source := readScaffoldFile(t, root, entry)
+
+				// The annotation is the bug. Inference is correct here, and any
+				// hand-written stand-in for Inertia's own types will drift from
+				// them again.
+				if strings.Contains(source, "InertiaSetupArgs") {
+					t.Errorf("%s annotates setup with a hand-written type, which does not "+
+						"match Inertia's and fails tsc", entry)
+				}
+				// React 19 needs no React import for JSX, and an unused one is
+				// an error under noUnusedLocals.
+				if strings.Contains(source, `import React from "react"`) {
+					t.Errorf("%s imports React for JSX, which react-jsx does not need", entry)
+				}
+				// A missing page must say so rather than handing Inertia
+				// undefined, which surfaces as an unrelated render error.
+				if !strings.Contains(source, "no page component at") {
+					t.Errorf("%s resolves a missing page to undefined instead of reporting it", entry)
+				}
+			}
+
+			// import.meta.glob comes from Vite's ambient types. Without them the
+			// entry point fails to typecheck on its very first line.
+			tsconfig := readScaffoldFile(t, root, "tsconfig.json")
+			if !strings.Contains(tsconfig, `"vite/client"`) {
+				t.Error("tsconfig.json does not include Vite's ambient types, so " +
+					"import.meta.glob does not typecheck")
+			}
+		})
+	}
+}
