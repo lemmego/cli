@@ -6,7 +6,6 @@ import (
 
 	"github.com/lemmego/api/app"
 	"github.com/lemmego/api/config"
-	_ "github.com/lemmego/api/logger"
 	"github.com/lemmego/api/res"
 	"github.com/lemmego/lemmego/bootstrap"
 	_ "github.com/lemmego/lemmego/internal/configs"

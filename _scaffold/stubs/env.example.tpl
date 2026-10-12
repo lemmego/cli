@@ -25,6 +25,21 @@ DB_PASSWORD=
 {{- end}}
 {{- end}}
 
+# Logging. Every one of these has a working default, so the whole block can be
+# deleted — and an empty value is treated as absent rather than as a choice.
+#
+# LOG_CHANNEL: console (readable lines on stderr), file (JSON in a rotating
+# file), json (JSON on stderr, for a platform that collects stdio), stack
+# (console and file together) or null. Defaults to console in development and
+# stack in production.
+LOG_CHANNEL=console
+LOG_LEVEL=debug
+LOG_FILE=storage/logs/app.log
+# Rotate on size as well as date, so a loop cannot fill the disk overnight.
+LOG_DAILY=true
+LOG_MAX_SIZE=33554432
+LOG_MAX_FILES=7
+
 FILESYSTEM_DISK={{.FilesystemDisk}}
 {{- if eq .FilesystemDisk "s3"}}
 AWS_ACCESS_KEY_ID=

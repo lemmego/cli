@@ -7,6 +7,7 @@ import (
 
 	{{- end}}
 	"github.com/lemmego/api/app"
+	"github.com/lemmego/api/logger"
 	"github.com/lemmego/api/providers/fs"
 	"github.com/lemmego/api/providers/session"
 	{{- if .EnableAuth}}
@@ -51,6 +52,12 @@ import (
 // opening a second one of its own.
 func LoadProviders() []app.Provider {
 	return []app.Provider{
+		// First, and for a reason worth keeping: every provider after this
+		// one logs while it boots, and a record emitted before this runs goes
+		// to slog's bare default instead of the file, format and level this
+		// application configured. Set LOG_CHANNEL and the rest in .env, or
+		// fix something in code with &logger.Provider{Options: ...}.
+		&logger.Provider{},
 		&fs.Provider{},
 		&session.Provider{},
 		{{- if .UseORMConnector}}
