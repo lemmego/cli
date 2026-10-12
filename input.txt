@@ -1,25 +1,34 @@
 package {{.PackageName}}
 
 import (
+    {{- range .Fields}}
+      {{- if eq .Type "file"}}
+    "mime/multipart"
+
+      {{- break}}
+      {{- end}}
+    {{- end}}
     "github.com/lemmego/api/app"
     {{- if .HasUnique}}
     "github.com/lemmego/api/db"
     {{- end}}
-    {{- range .Fields}}
-      {{- if eq .Type "file"}}
-    "github.com/ggicci/httpin"
-      {{- break}}
-      {{- end}}
-    {{- end}}
 )
 
+// Bound by c.ParseInput, which picks a decoder from the request's
+// Content-Type: `json:` for a JSON body, `form:` for a form — URL-encoded,
+// multipart, or a query string on a request with no body.
+//
+// A file is a *multipart.FileHeader, the standard library's own type: it
+// carries the filename, the size and the headers, and Open() gives the
+// content. Use []*multipart.FileHeader for a field that takes several, which
+// binds a repeated key, `name[0]` and `name[]` alike.
 type {{.InputName | toCamel}}Input struct {
     ctx      app.Context
 {{- range .Fields}}
     {{- if eq .Type "file"}}
-    {{.Name | toCamel}} *httpin.File `json:"{{.Name | toSnake}}" in:"form={{.Name | toSnake}}"`
+    {{.Name | toCamel}} *multipart.FileHeader `json:"-" form:"{{.Name | toSnake}}"`
     {{- else}}
-    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" in:"form={{.Name | toSnake}}"`
+    {{.Name | toCamel}} {{.Type}} `json:"{{.Name | toSnake}}" form:"{{.Name | toSnake}}"`
     {{- end}}
 {{- end}}
 }

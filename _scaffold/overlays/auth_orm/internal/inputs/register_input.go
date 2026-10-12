@@ -7,10 +7,10 @@ import (
 
 type RegisterInput struct {
 	ctx                  app.Context
-	Name                 string `json:"name"`
-	Email                string `json:"email"`
-	Password             string `json:"password"`
-	PasswordConfirmation string `json:"password_confirmation"`
+	Name                 string `json:"name" form:"name"`
+	Email                string `json:"email" form:"email"`
+	Password             string `json:"password" form:"password"`
+	PasswordConfirmation string `json:"password_confirmation" form:"password_confirmation"`
 }
 
 func NewRegisterInput(c app.Context) (*RegisterInput, error) {

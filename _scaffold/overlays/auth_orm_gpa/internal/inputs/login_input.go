@@ -6,8 +6,8 @@ import (
 
 type LoginInput struct {
 	ctx      app.Context
-	Email    string `json:"email"`
-	Password string `json:"password"`
+	Email    string `json:"email" form:"email"`
+	Password string `json:"password" form:"password"`
 }
 
 func NewLoginInput(c app.Context) (*LoginInput, error) {
