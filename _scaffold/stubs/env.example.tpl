@@ -41,6 +41,15 @@ LOG_MAX_SIZE=33554432
 LOG_MAX_FILES=7
 
 FILESYSTEM_DISK={{.FilesystemDisk}}
+
+# Where uploads live. Absolute in a real deployment: a relative path resolves
+# against the working directory, so a single binary started from anywhere else
+# writes its uploads somewhere else and serves nothing, with a 404 as the only
+# symptom. The fs provider logs the root it resolved at boot.
+#
+# Two disks are rooted under it: app/public is served in full at /storage/,
+# app/private is not served and is the default.
+STORAGE_PATH=./storage
 {{- if eq .FilesystemDisk "s3"}}
 AWS_ACCESS_KEY_ID=
 AWS_SECRET_ACCESS_KEY=

@@ -58,18 +58,14 @@ func LoadProviders() []app.Provider {
 		// application configured. Set LOG_CHANNEL and the rest in .env, or
 		// fix something in code with &logger.Provider{Options: ...}.
 		&logger.Provider{},
-		// Uploads are written to the disk this registers, and nothing is
-		// served from it until you say which directories are public:
+		// The public disk is served in full at /storage/, and the default
+		// disk is not served at all — see internal/configs/filesystems.go
+		// for the layout and why the split rather than an allowlist.
 		//
-		//	&fs.Provider{Public: []string{"avatars"}}
-		//
-		// mounts storage/avatars at /storage/avatars/. It is not the default
-		// because the same disk holds storage/logs, storage/session and, in a
-		// SQLite project, the database — and the log is where mail is written
-		// outside production, so it carries live confirmation and reset
-		// links. Without this, a stored file is requested from a URL only the
-		// 404 page answers, which an img renders as a broken image.
-		&fs.Provider{},
+		// Uploads reach it with c.UploadOn("public", field, dir, name). The
+		// default disk is for anything that should not be readable by
+		// anybody with the URL.
+		&fs.Provider{PublicDisk: "public", PublicEntireDisk: true},
 		&session.Provider{},
 		{{- if .UseORMConnector}}
 		&ormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
