@@ -314,6 +314,10 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 	if td.Preset == PresetMVC {
 		stubs["internal/routes/web.go"] = "web.go.tpl"
 	}
+	// One example test, because a generated project used to ship none at all
+	// — no _test.go anywhere in the scaffold — so a user had no model for how
+	// to test a handler and no signal that apptest existed.
+	stubs["internal/routes/routes_test.go"] = "routes_test.go.tpl"
 	if td.HasDatabase() {
 		stubs["internal/configs/database.go"] = "database.go.tpl"
 	}

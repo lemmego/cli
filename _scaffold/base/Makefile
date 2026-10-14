@@ -7,6 +7,17 @@ run:
 build:
 	@lemmego build
 
+test:
+	@# APPTEST_POSTGRES_DSN is what makes the tests that need a database run
+	@# rather than skip — and a skipped suite and a passing suite have the
+	@# same exit code, so a run that finishes suspiciously fast is the
+	@# symptom of this being unset.
+	@if [ -z "$$APPTEST_POSTGRES_DSN" ]; then \
+		echo "note: APPTEST_POSTGRES_DSN is unset, so tests needing a database will skip."; \
+		echo "      export APPTEST_POSTGRES_DSN=\"postgres://$$USER@127.0.0.1:5432/postgres?sslmode=disable\""; \
+	fi
+	@go test ./...
+
 deps:
 	@go mod tidy
 	@go install github.com/a-h/templ/cmd/templ@latest
