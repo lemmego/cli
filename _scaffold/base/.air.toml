@@ -6,7 +6,7 @@ tmp_dir = "tmp"
   args_bin = []
   bin = "./tmp/main"
   cmd = "CGO_ENABLED=0 go build -gcflags='-N -l' -o ./tmp/main ./cmd/app"
-  exclude_dir = ["assets", "tmp", "vendor", "node_modules", "testdata", "migrations"]
+  exclude_dir = ["assets", "tmp", "vendor", "node_modules", "testdata"]
   exclude_file = []
   exclude_regex = ["_test.go", ".*_templ.go"]
   exclude_unchanged = false

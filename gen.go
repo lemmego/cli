@@ -3,10 +3,10 @@ package cli
 import (
 	"bytes"
 	"errors"
-	"html/template"
 	"log"
 	"reflect"
 	"strings"
+	"text/template"
 
 	"github.com/iancoleman/strcase"
 	"golang.org/x/text/cases"
@@ -104,9 +104,29 @@ type CommandGenerator interface {
 	Commander
 }
 
+// ParseTemplate renders a generator stub.
+//
+// text/template, not html/template, because the output is Go and TypeScript
+// source rather than a web page. html/template escapes every interpolated
+// value for HTML and — worse — reads the literal template text as HTML to
+// decide the escaping context. Literal markup such as <div> survived that, so
+// the JSX stubs looked fine, but `useForm<{{.Name}}Fields>` did not: an action
+// where a tag name belongs is not something the HTML parser will emit, so it
+// rewrote the "<" to "&lt;" and the generated form could not compile.
+//
+// The giveaway that this was already hurting was the line this replaced — a
+// strings.ReplaceAll turning "&#34;" back into a quote. It patched the one
+// entity somebody hit; "<", ">", "&" and "'" in an interpolated value were
+// still being mangled, silently, with no second hack to catch them.
 func ParseTemplate(tmplData map[string]interface{}, fileContents string, funcMap template.FuncMap) (string, error) {
 	var out bytes.Buffer
-	tx := template.New("template")
+	// missingkey=error, because the alternative is silence. Appendable was
+	// set only when it had content, so every generated form and handler ended
+	// with the literal "<no value>" — valid template output, invalid Go and
+	// invalid TSX, and nothing said so. A generator that cannot fill a
+	// placeholder should refuse rather than write the placeholder's error
+	// message into somebody's source file.
+	tx := template.New("template").Option("missingkey=error")
 	if funcMap != nil {
 		tx.Funcs(funcMap)
 	}
@@ -115,9 +135,7 @@ func ParseTemplate(tmplData map[string]interface{}, fileContents string, funcMap
 	if err != nil {
 		return "", errors.New("Unable to execute template:" + err.Error())
 	}
-	// Replace &#34; with "
-	result := strings.ReplaceAll(out.String(), "&#34;", "\"")
-	return result, nil
+	return out.String(), nil
 }
 
 // genCmd represents the generator command

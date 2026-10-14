@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"os"
@@ -141,9 +143,67 @@ func copyEnvFile(dirPath string) {
 	}
 }
 
+// generateAppKey writes a signing key into the new project's .env.
+//
+// Done here rather than by shelling out to `lemmego run appkey`, which is how
+// it used to work and could not work: `run` boots the generated application
+// to reach its command, and the application cannot boot until somebody has
+// filled in database credentials — so the step printed "Generating app key"
+// and then panicked with "DB Username is required", and every new project
+// started life with no key at all. An application with no key cannot
+// authenticate anybody, which is the first thing somebody tries.
+//
+// The project keeps its own `appkey` command for rotating the key later, when
+// the database does work. This is only the first one.
 func generateAppKey(dirPath string) {
 	fmt.Println("> Generating app key...")
-	RunCommand(dirPath, "lemmego", "run", "appkey")
+
+	// Thirty-two random bytes, base64 encoded — the same thing
+	// api/utils.GenerateKey produces. Reimplemented over the standard library
+	// rather than imported, because the CLI does not depend on the framework
+	// and should not start: api/app reaches 300 packages, and this is four
+	// lines of crypto/rand.
+	key := make([]byte, 32)
+	if _, err := rand.Read(key); err != nil {
+		fmt.Println("Warning: could not generate an app key:", err)
+		return
+	}
+	envPath := filepath.Join(dirPath, ".env")
+	if err := setEnvValue(envPath, "APP_KEY", base64.StdEncoding.EncodeToString(key)); err != nil {
+		fmt.Println("Warning: could not write the app key:", err)
+		fmt.Println("Run `make appkey` once the database is configured.")
+	}
+}
+
+// setEnvValue replaces the assignment of key in a .env file, or appends one.
+//
+// Matching is anchored to "<key>=" at the start of a trimmed line, never a
+// substring: the old project-side version used strings.Contains and so
+// overwrote the comment explaining APP_KEY instead of the variable, wedging
+// the key between two halves of a sentence.
+func setEnvValue(path, key, value string) error {
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+
+	prefix := key + "="
+	lines := strings.Split(string(contents), "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(strings.TrimSpace(line), prefix) {
+			lines[i] = prefix + value
+			return os.WriteFile(path, []byte(strings.Join(lines, "\n")), 0o600)
+		}
+	}
+
+	// No assignment to replace, so add one rather than reporting success
+	// having done nothing.
+	appended := string(contents)
+	if !strings.HasSuffix(appended, "\n") {
+		appended += "\n"
+	}
+	appended += prefix + value + "\n"
+	return os.WriteFile(path, []byte(appended), 0o600)
 }
 
 func renameModule(newModuleName string, dirPath string) {

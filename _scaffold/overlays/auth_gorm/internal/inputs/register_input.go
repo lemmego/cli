@@ -2,7 +2,7 @@ package inputs
 
 import (
 	"github.com/lemmego/api/app"
-	"github.com/lemmego/lemmego/internal/repos"
+	"github.com/lemmego/api/db"
 )
 
 type RegisterInput struct {
@@ -26,17 +26,20 @@ func NewRegisterInput(c app.Context) (*RegisterInput, error) {
 func (i *RegisterInput) Validate() error {
 	v := i.ctx.Validator()
 	v.Field("name", i.Name).Required().Max(255)
-	v.Field("email", i.Email).Required().Email().Custom(func(v interface{}) (bool, string) {
-		exists, err := repos.User(i.ctx.App()).ExistsByEmail(i.ctx.RequestContext(), i.Email)
-		if err != nil {
-			return false, "Error checking email uniqueness"
-		}
-		if exists {
-			return false, "Email already in use"
-		}
-		return true, ""
-	})
+	// Check, not Custom. Custom answers (bool, string) and so has no way to
+	// say "I could not tell": a uniqueness lookup that failed because the
+	// database was unreachable came back as false, and the person signing up
+	// was told their email address was already in use. Check takes a rule
+	// that can also return an error, which v.Err reports separately below.
+	v.Field("email", i.Email).Required().Email().
+		Check(db.Unique(i.ctx.App(), "users", "email"))
 	v.Field("password", i.Password).Required().Min(8)
 	v.Field("password_confirmation", i.PasswordConfirmation).Required().Equals(i.Password)
+	// Err is a rule that could not run, as opposed to a value somebody can
+	// fix. Returning it separately lets the caller answer 503 instead of
+	// blaming the input for an outage.
+	if err := v.Err(); err != nil {
+		return err
+	}
 	return v.Validate()
 }

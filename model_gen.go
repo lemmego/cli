@@ -142,6 +142,9 @@ func (mg *ModelGenerator) Generate(appendable ...[]byte) error {
 		"Fields":      mg.fields,
 	}
 
+	// Always present, because every stub ends with {{.Appendable}} and a key
+	// that is absent renders as the literal "<no value>" into generated source.
+	tmplData["Appendable"] = ""
 	if len(appendable) > 0 {
 		tmplData["Appendable"] = string(appendable[0])
 	}

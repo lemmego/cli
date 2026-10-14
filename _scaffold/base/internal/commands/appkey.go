@@ -31,7 +31,12 @@ func generateAppKey() string {
 
 func replaceAppKey() {
 	filePath := "./.env"
-	searchString := "APP_KEY"
+	// An assignment, anchored, rather than any line mentioning APP_KEY.
+	// strings.Contains matched the comment above the key in .env.example and
+	// replaced *that* line, wedging the generated key between two halves of a
+	// sentence — and leaving the "not found" branch below permanently dead,
+	// since a mention always existed.
+	searchString := "APP_KEY="
 	replaceString := fmt.Sprintf("APP_KEY=%s", generateAppKey())
 
 	file, err := os.Open(filePath)
@@ -57,7 +62,7 @@ func replaceAppKey() {
 	appKeyFound := false
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.Contains(line, searchString) {
+		if strings.HasPrefix(strings.TrimSpace(line), searchString) {
 			appKeyFound = true
 			line = replaceString
 		}

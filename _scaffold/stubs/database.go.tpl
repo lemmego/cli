@@ -55,7 +55,17 @@ func init() {
 
 				// The GORM and Bun connectors read this key directly, so its
 				// absence used to panic them at boot.
-				"options":           config.M{},
+				//
+				// sslmode defaults to disable because lib/pq defaults to
+				// require, and a local Postgres almost never serves TLS — so
+				// a freshly scaffolded project answered "pq: SSL is not
+				// enabled on the server" and could not boot at all. Set
+				// DB_SSLMODE to require or verify-full in any deployment that
+				// crosses a network; this default is for a database on
+				// localhost.
+				"options": config.M{
+					"sslmode": config.MustEnv("DB_SSLMODE", "disable"),
+				},
 				"max_open_conns":    config.MustEnv("DB_MAX_OPEN_CONNS", 100),
 				"max_idle_conns":    config.MustEnv("DB_MAX_IDLE_CONNS", 10),
 				"conn_max_lifetime": config.MustEnv("DB_CONN_MAX_LIFETIME", time.Hour*2),

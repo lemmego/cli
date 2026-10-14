@@ -8,9 +8,10 @@ import (
 	"testing"
 )
 
-// authCombinations is every project the auth overlays can produce: three ORMs,
-// each with and without GPA. The overlay directory is chosen from exactly
-// these two fields, so this is the whole space.
+// authCombinations is every project the compile gate builds: the auth
+// overlays, which are three ORMs each with and without GPA (the overlay
+// directory is chosen from exactly those two fields, so that part is the whole
+// space), plus one project per frontend preset — see frontendCombinations.
 func authCombinations() []ProjectConfig {
 	var configs []ProjectConfig
 	for _, orm := range []OrmChoice{OrmLemmego, OrmGORM, OrmBun} {
@@ -35,7 +36,90 @@ func authCombinations() []ProjectConfig {
 			})
 		}
 	}
-	return configs
+	return append(configs, frontendCombinations()...)
+}
+
+// generateTemplComponents runs `templ generate` when the project has .templ
+// sources, and skips the case when the binary is missing.
+//
+// The templ overlay ships .templ files and no .go, which is correct — a
+// generated _templ.go in version control is a build artifact that goes stale.
+// But it means the package those files declare does not exist until templ has
+// run, so `go mod tidy` on a fresh templ project fails looking for
+// <module>/templates. In normal use `lemmego dev` runs `templ generate
+// --watch` and this never shows; here the compiler is invoked directly, so
+// the generator has to be too.
+//
+// Only the templ-without-Inertia preset needs it: when both are selected the
+// Inertia branch wins in web.go and the templates package is never imported.
+func generateTemplComponents(t *testing.T, root string) {
+	t.Helper()
+
+	sources, err := filepath.Glob(filepath.Join(root, "templates", "*.templ"))
+	if err != nil || len(sources) == 0 {
+		return
+	}
+	templcmd, err := exec.LookPath("templ")
+	if err != nil {
+		t.Skip("no templ binary on PATH, so a templ project cannot be compiled here")
+	}
+
+	cmd := exec.Command(templcmd, "generate")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(), "GOWORK=off")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("templ generate: %v\n%s", err, out)
+	}
+}
+
+// frontendCombinations covers every frontend preset, because the matrix above
+// covered none of them — it was six rows of PresetMVC on SQLite, so the only
+// Go file whose *imports* vary by frontend, internal/routes/web.go, was
+// compiled in exactly one shape.
+//
+// That is how both templ+inertia presets came to generate a project that
+// could not compile: web.go.tpl imported api/app once per frontend condition,
+// and those two presets satisfy two conditions at once. The offline checks
+// could not have caught it with the preset present either — parser.ParseFile
+// tolerates a duplicate import, and the unused-import check keys on the
+// identifier, so one app. reference marks both copies used. Only a compiler
+// sees it, so the compiler has to see every preset.
+//
+// PresetRESTAPI is here for the opposite reason: it is the one preset that
+// emits no web routes at all, so it is the only row that proves the
+// conditions degrade rather than leaving an import behind.
+func frontendCombinations() []ProjectConfig {
+	frontends := []FrontendPreset{
+		FrontendGoTemplates,
+		FrontendTempl,
+		FrontendInertiaReact,
+		FrontendInertiaVue,
+		FrontendTemplInertiaReact,
+		FrontendTemplInertiaVue,
+	}
+
+	configs := make([]ProjectConfig, 0, len(frontends)+1)
+	for _, frontend := range frontends {
+		name := "front" + strings.ReplaceAll(string(frontend), "_", "")
+		configs = append(configs, ProjectConfig{
+			Name:       name,
+			ModuleName: "example.com/contracts/" + name,
+			Preset:     PresetMVC,
+			Frontend:   frontend,
+			ORM:        OrmLemmego,
+			SQLDriver:  SQLSQLite,
+			EnableAuth: true,
+		})
+	}
+
+	return append(configs, ProjectConfig{
+		Name:       "frontrestapi",
+		ModuleName: "example.com/contracts/frontrestapi",
+		Preset:     PresetRESTAPI,
+		ORM:        OrmLemmego,
+		SQLDriver:  SQLSQLite,
+		EnableAuth: true,
+	})
 }
 
 // The current user is resolved by re-reading the row each request, so every
@@ -126,6 +210,7 @@ func TestGeneratedAuthProjectsCompile(t *testing.T) {
 			if replace := os.Getenv("LEMMEGO_SCAFFOLD_REPLACE"); replace != "" {
 				replaceLocalModules(t, gocmd, root, replace)
 			}
+			generateTemplComponents(t, root)
 
 			// vet rather than build: it type-checks every package, main
 			// included, which is the whole point here, and it skips the link

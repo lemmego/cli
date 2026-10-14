@@ -11,6 +11,7 @@ import (
 	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -31,6 +32,24 @@ var devCmd = &cobra.Command{
 
 		var processes []devProcess
 
+		// Vite first, and then wait for it, because an Inertia project's
+		// server-side renderer is the Vite dev server: @inertiajs/vite serves
+		// /__inertia_ssr, and the address is published by writing
+		// ./public/hot. Starting air first meant the Go process booted with no
+		// hot file, so the first page loads rendered against a standalone
+		// renderer that `dev` deliberately never starts — and strict SSR,
+		// which is on outside production, turns that into a 500 rather than a
+		// quiet degrade.
+		//
+		// lemmego/inertia re-resolves the address per render now, so this is
+		// no longer the difference between working and not. It is the
+		// difference between a clean start and a few seconds of errors on the
+		// first page somebody opens, which is the first thing they see.
+		if fileExists("package.json") {
+			processes = append(processes, startDevProcess("vite", ".", npmBinary(), "run", "dev"))
+			waitForViteHotFile()
+		}
+
 		// Always: air for Go hot reload
 		EnsureBinary("air")
 		processes = append(processes, startDevProcess("air", ".", "air"))
@@ -39,11 +58,6 @@ var devCmd = &cobra.Command{
 		if hasTemplFiles() {
 			EnsureBinary("templ")
 			processes = append(processes, startDevProcess("templ", ".", "templ", "generate", "--watch", "--proxy", "http://localhost:8080"))
-		}
-
-		// If node deps exist: vite dev server
-		if fileExists("package.json") {
-			processes = append(processes, startDevProcess("vite", ".", npmBinary(), "run", "dev"))
 		}
 
 		fmt.Println()
@@ -158,4 +172,45 @@ func processPrefix(name string) string {
 		c = "\033[33m" // yellow default
 	}
 	return fmt.Sprintf("%s[%s]%s", c, name, reset)
+}
+
+// viteHotPath mirrors lemmego/inertia's ViteHotPath. It is duplicated rather
+// than imported because the CLI must build without the framework in its
+// dependency graph.
+const viteHotPath = "public/hot"
+
+// viteStartupBudget bounds the wait for the dev server. It is generous
+// because a cold Vite with a large dependency graph is slow, and cheap to
+// overrun because exceeding it only means proceeding anyway.
+const viteStartupBudget = 20 * time.Second
+
+// waitForViteHotFile blocks until Vite publishes its address, or the budget
+// expires.
+//
+// Not fatal on timeout: a project may have a package.json and no Vite, or a
+// dev server that fails for reasons of its own, and in both cases the right
+// answer is to start the Go server and let its own errors say so rather than
+// to refuse to run.
+func waitForViteHotFile() {
+	// A stale hot file from a previous run would be believed instantly and
+	// point at a dev server that is gone. Vite rewrites it on boot, so the
+	// wait is for a file newer than this moment.
+	started := time.Now()
+	if info, err := os.Stat(viteHotPath); err == nil && info.ModTime().Before(started) {
+		_ = os.Remove(viteHotPath)
+	}
+
+	fmt.Print("> Waiting for the Vite dev server")
+	deadline := started.Add(viteStartupBudget)
+	for ticks := 0; time.Now().Before(deadline); ticks++ {
+		if fileExists(viteHotPath) {
+			fmt.Println(" ready")
+			return
+		}
+		if ticks > 0 && ticks%10 == 0 {
+			fmt.Print(".")
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	fmt.Println(" not yet; starting the server anyway")
 }

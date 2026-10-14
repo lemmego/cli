@@ -11,6 +11,9 @@ require (
 
 require (
 	github.com/lemmego/api {{.Version "github.com/lemmego/api"}}
+	{{- if and .FrontendHasTempl (not .InertiaProvider)}}
+	github.com/lemmego/templ {{.Version "github.com/lemmego/templ"}}
+	{{- end}}
 	github.com/lemmego/migration {{.Version "github.com/lemmego/migration"}}
 	{{- if .HasCache}}
 	github.com/lemmego/cache {{.Version "github.com/lemmego/cache"}}

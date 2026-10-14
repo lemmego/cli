@@ -4,6 +4,14 @@ APP_ENV=development
 APP_DEBUG=true
 APP_PORT=8080
 
+# Filled in by `make appkey`, which signs sessions and cookies. Empty is not a
+# working value — MustEnv treats a present-but-empty variable as a decision, so
+# an application left like this cannot authenticate anybody. The line exists
+# empty rather than absent so that appkey has something to replace: it used to
+# match any line mentioning APP_KEY and would overwrite the comment explaining
+# it.
+APP_KEY=
+
 # Left commented out on purpose. MustEnv falls back only when a variable is
 # absent, so setting this to an empty value would defeat the APP_KEY fallback
 # rather than leaving it in place.
@@ -22,6 +30,16 @@ DB_PORT={{.SQLDriver.DefaultPort}}
 DB_DATABASE=lemmego
 DB_USERNAME=
 DB_PASSWORD=
+{{- if eq .SQLDriver "postgres"}}
+# lib/pq defaults to sslmode=require and a local Postgres rarely serves TLS.
+# Raise this to require or verify-full wherever the database is not local.
+DB_SSLMODE=disable
+{{- end}}
+
+# `lemmego run migrate` builds its own DSN and reads this, where the
+# application reads the options map in internal/configs/database.go. They are
+# separate paths, so a parameter needed by both goes in both places.
+DB_PARAMS={{if eq .SQLDriver "postgres"}}sslmode=disable{{end}}
 {{- end}}
 {{- end}}
 

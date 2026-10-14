@@ -29,6 +29,9 @@
     "vite": "{{.Version "vite"}}"
   },
   "dependencies": {
+    {{- if .InertiaProvider}}
+    "@inertiajs/core": "{{.Version "@inertiajs/core"}}",
+    {{- end}}
     {{- if .FrontendHasReact}}
     "@inertiajs/react": "{{.Version "@inertiajs/react"}}",
     {{- end}}

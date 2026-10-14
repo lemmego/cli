@@ -1,9 +1,26 @@
 import React from "react";
 import { useForm, usePage } from "@inertiajs/react";
 
+// The shape of this form, written out rather than inferred, so that
+// handleInput can index it and `tsc --noEmit` has something to check. Inertia's
+// PageProps is an open `[key: string]: unknown` index signature, so anything
+// read off usePage() is `unknown` until something declares otherwise — see
+// resources/js/inertia-env.d.ts, which is where shared props go.
+type {{.Name}}Fields = {
+{{- range .Fields}}
+  {{- if eq .Type "file"}}
+  {{.Name | toSnake}}: File | undefined;
+  {{- else if eq .Type "boolean"}}
+  {{.Name | toSnake}}: boolean;
+  {{- else}}
+  {{.Name | toSnake}}: string;
+  {{- end}}
+{{- end}}
+};
+
 const {{.Name}}: React.FC = () => {
-  const { errors, input, message } = usePage().props;
-  const { data, setData, post, progress } = useForm({
+  const { errors, message } = usePage().props;
+  const { data, setData, post, progress } = useForm<{{.Name}}Fields>({
   {{- range .Fields}}
     {{- if eq .Type "file"}}
     {{.Name | toSnake}}: undefined,
@@ -18,17 +35,23 @@ const {{.Name}}: React.FC = () => {
   function handleInput(
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) {
+    const field = e.target.name as keyof {{.Name}}Fields;
+    type Value = {{.Name}}Fields[keyof {{.Name}}Fields];
+
     if ("files" in e.target && e.target.files && e.target.files.length > 0) {
-      setData(e.target.name, e.target.files[0]);
+      setData(field, e.target.files[0] as Value);
       return;
     }
 
-	if (typeof data[e.target.name] == "boolean") {
-		setData(e.target.name, !!e.target.value)
-		return
-	}
+    // .checked, not the value: an unchecked box still reports value "on" in
+    // the markup browsers generate, so !!e.target.value was true either way
+    // and a checkbox could never be cleared.
+    if (e.target instanceof HTMLInputElement && e.target.type === "checkbox") {
+      setData(field, e.target.checked as Value);
+      return;
+    }
 
-    setData(e.target.name, e.target.value);
+    setData(field, e.target.value as Value);
   }
 
   function submit(e: React.FormEvent<HTMLFormElement>) {

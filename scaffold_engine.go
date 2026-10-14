@@ -336,6 +336,12 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 		stubs["tsconfig.json"] = "tsconfig.json.tpl"
 		stubs["vite.config.js"] = "vite.config.js.tpl"
 	}
+	if td.InertiaProvider {
+		// Tells Inertia's types that a validation error is a []string, which
+		// is what this framework flashes. Without it the generated forms are
+		// correct at runtime and rejected by tsc. See the file's own comment.
+		stubs["resources/js/inertia-env.d.ts"] = "inertia-env.d.ts.tpl"
+	}
 
 	stubsDir := path.Join(src.prefix, "stubs")
 
