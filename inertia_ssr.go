@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -20,6 +19,13 @@ import (
 
 const ssrPidFile = ".ssr.pid"
 
+// Where `check` looks for the renderer.
+//
+// They are flags on `check` alone. `start` used to carry them too, which was
+// a lie in both directions: @inertiajs/core's server reads neither — its port
+// is fixed when the bundle is built, by the vite plugin's
+// inertia({ssr: {port}}) option — so passing --port only changed the address
+// start printed, not the one it listened on.
 var ssrPort int
 var ssrHost string
 
@@ -67,7 +73,11 @@ var inertiaSSRStartCmd = &cobra.Command{
 
 		pid := nodeCmd.Process.Pid
 		os.WriteFile(ssrPidFile, []byte(strconv.Itoa(pid)), 0644)
-		fmt.Printf("Inertia SSR server started (PID %d) on http://%s:%d\n", pid, ssrHost, ssrPort)
+		// No address, for the same reason there is no --port: this command
+		// does not choose one and cannot read the one the bundle baked in, so
+		// naming a port here would be a guess printed as a fact. `check` is
+		// what answers which address is actually serving.
+		fmt.Printf("Inertia SSR server started (PID %d)\n", pid)
 
 		// Wait for signal
 		sig := make(chan os.Signal, 1)
@@ -135,11 +145,28 @@ var inertiaSSRCheckCmd = &cobra.Command{
 	},
 }
 
-// probeSSR asks the render endpoint to render, and requires a body back.
+// probeSSR asks the render endpoint to render, and reads the answer.
 //
 // @inertiajs/core's server also serves /health, but that only reports that the
 // process is up — the same thing a port dial reports. Rendering is the
 // property worth checking.
+//
+// The component asked for is deliberately one the bundle cannot have, so the
+// renderer is *expected* to refuse it. The refusal is the signal: the process
+// is up, the module graph loaded, and the bundle's router ran far enough to
+// decide the component does not exist. **The status is therefore not required
+// to be 200** — a correct renderer answering this question says 500.
+//
+// Requiring 200 is what this used to do, and it meant `check` reported every
+// healthy renderer as unusable. lemmego/inertia's CheckSSR had the identical
+// bug and fixed it; the logic is duplicated rather than imported because the
+// CLI deliberately keeps the framework out of its dependency graph.
+//
+// That makes this a shallow check: it cannot tell a renderer that fails only
+// on unknown components from one that fails on all of them. Proving a renderer
+// produces documents needs a props-free page to ask for, which is the
+// application's to supply — lemmego/inertia's WithSSRProbeComponent is where
+// that lives.
 func probeSSR(host string, port int) error {
 	body := []byte(`{"component":"__inertia_probe__","props":{},"url":"/","version":"","encryptHistory":false,"clearHistory":false}`)
 	endpoint := fmt.Sprintf("http://%s:%d/render", host, port)
@@ -155,12 +182,21 @@ func probeSSR(host string, port int) error {
 	if err != nil {
 		return err
 	}
-	if response.StatusCode != http.StatusOK {
-		return fmt.Errorf("the render endpoint answered %d", response.StatusCode)
-	}
+
+	// An empty body means the bundle never loaded. This is the port dial's
+	// blind spot and the reason this function exists.
 	if len(bytes.TrimSpace(answer)) == 0 {
 		return fmt.Errorf("the render endpoint answered with an empty body, so the SSR bundle is not loaded")
 	}
+
+	// A 404 is the endpoint itself being wrong — a renderer at another path,
+	// or a dev server not serving the SSR route — rather than a renderer
+	// refusing a component. Worth separating, because the fix is different:
+	// configuration rather than a broken bundle.
+	if response.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("there is no render endpoint at %s", endpoint)
+	}
+
 	return nil
 }
 
@@ -181,18 +217,9 @@ func processRunning(pid int) bool {
 	return proc.Signal(syscall.Signal(0)) == nil
 }
 
-func checkPort(host string, port int) bool {
-	conn, err := net.DialTimeout("tcp", fmt.Sprintf("%s:%d", host, port), 500*time.Millisecond)
-	if err != nil {
-		return false
-	}
-	conn.Close()
-	return true
-}
-
 func init() {
-	inertiaSSRStartCmd.Flags().IntVar(&ssrPort, "port", 13714, "SSR server port")
-	inertiaSSRStartCmd.Flags().StringVar(&ssrHost, "host", "127.0.0.1", "SSR server host")
+	inertiaSSRCheckCmd.Flags().IntVar(&ssrPort, "port", 13714, "Port the SSR server listens on")
+	inertiaSSRCheckCmd.Flags().StringVar(&ssrHost, "host", "127.0.0.1", "Host the SSR server listens on")
 	inertiaSSRCmd.AddCommand(inertiaSSRStartCmd)
 	inertiaSSRCmd.AddCommand(inertiaSSRStopCmd)
 	inertiaSSRCmd.AddCommand(inertiaSSRCheckCmd)
