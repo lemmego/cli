@@ -10,9 +10,8 @@
 # have failed if they had, since `cd api`, `go build ./api/...` and
 # `go work sync` all name things that are not there.
 #
-# There is also no GOWORK=off step. That distinction matters in the monorepo
-# working tree, where a workspace can mask a missing requirement; here there
-# is no go.work at all, so the ordinary run already is the standalone one.
+# GOWORK=off keeps this workflow honest when it is run from a checkout nested
+# inside a larger local workspace, and matches the published-module behavior.
 name: CI
 
 on:
@@ -28,6 +27,8 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      GOWORK: off
     steps:
       - uses: actions/checkout@v4
         with:

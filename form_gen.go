@@ -102,18 +102,13 @@ func (fg *FormGenerator) Generate(appendable ...[]byte) error {
 	if err != nil {
 		return err
 	}
+	if err := ensurePackageDir(fs, fg.GetPackagePath()); err != nil {
+		return err
+	}
 
 	if fg.flavor == "templ" {
 		err = fs.Write(fg.GetPackagePath()+"/"+fg.name+".templ", []byte(output))
 	} else if fg.flavor == "react" {
-		// Check if resources/js/Pages/Forms directory exists,
-		// create it if it doesn't
-		if exists, _ := fs.Exists(fg.GetPackagePath()); !exists {
-			err = fs.CreateDirectory(fg.GetPackagePath())
-			if err != nil {
-				return err
-			}
-		}
 		err = fs.Write(fg.GetPackagePath()+"/"+strcase.ToCamel(fg.name)+".tsx", []byte(output))
 	} else {
 		return fmt.Errorf("unsupported form flavor %q", fg.flavor)
