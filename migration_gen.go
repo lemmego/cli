@@ -55,18 +55,19 @@ type MigrationGenerator struct {
 
 func NewMigrationGenerator(mc *MigrationConfig) *MigrationGenerator {
 	version := time.Now().Format("20060102150405")
+	fields := slices.Clone(mc.Fields)
 	if mc.Timestamps {
 		timeStampFields := []*MigrationField{
 			{Name: "created_at", Type: "dateTime", Nullable: true},
 			{Name: "updated_at", Type: "dateTime", Nullable: true},
 			{Name: "deleted_at", Type: "dateTime", Nullable: true},
 		}
-		mc.Fields = append(mc.Fields, timeStampFields...)
+		fields = append(fields, timeStampFields...)
 	}
 	return &MigrationGenerator{
 		fmt.Sprintf("create_%s_table", mc.TableName),
 		mc.TableName,
-		mc.Fields,
+		fields,
 		version,
 		mc.PrimaryColumns,
 		mc.UniqueColumns,

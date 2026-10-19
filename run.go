@@ -38,14 +38,20 @@ var runCmd = &cobra.Command{
 		}
 
 		// Run the application — args includes the subcommand and its flags
-		goRunCmd := exec.Command("go", append([]string{"run", "./cmd/app"}, args...)...)
-		goRunCmd.Stdout = os.Stdout
-		goRunCmd.Stderr = os.Stderr
-
-		if err := goRunCmd.Run(); err != nil {
+		if err := runApplication(args); err != nil {
 			fmt.Printf("Error running the app: %v\n", err)
 		}
 	},
+}
+
+// runApplication is a seam for command-level tests. The CLI still uses the
+// real go tool by default, while tests can verify argument forwarding without
+// booting a generated application.
+var runApplication = func(args []string) error {
+	goRunCmd := exec.Command("go", append([]string{"run", "./cmd/app"}, args...)...)
+	goRunCmd.Stdout = os.Stdout
+	goRunCmd.Stderr = os.Stderr
+	return goRunCmd.Run()
 }
 
 func needsFrontend(args []string) bool {

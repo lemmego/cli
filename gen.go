@@ -130,8 +130,11 @@ func ParseTemplate(tmplData map[string]interface{}, fileContents string, funcMap
 	if funcMap != nil {
 		tx.Funcs(funcMap)
 	}
-	t := template.Must(tx.Parse(fileContents))
-	err := t.Execute(&out, tmplData)
+	t, err := tx.Parse(fileContents)
+	if err != nil {
+		return "", errors.New("Unable to parse template:" + err.Error())
+	}
+	err = t.Execute(&out, tmplData)
 	if err != nil {
 		return "", errors.New("Unable to execute template:" + err.Error())
 	}

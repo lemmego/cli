@@ -147,12 +147,18 @@ func killAll(processes []devProcess) {
 }
 
 func hasTemplFiles() bool {
-	matches, _ := filepath.Glob("**/*.templ")
-	if len(matches) > 0 {
-		return true
-	}
-	matches, _ = filepath.Glob("*/*.templ")
-	return len(matches) > 0
+	found := false
+	_ = filepath.WalkDir(".", func(path string, entry os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !entry.IsDir() && filepath.Ext(path) == ".templ" {
+			found = true
+			return filepath.SkipAll
+		}
+		return nil
+	})
+	return found
 }
 
 func fileExists(name string) bool {

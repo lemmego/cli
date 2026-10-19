@@ -3,11 +3,13 @@ package cli
 import (
 	"fmt"
 	"os"
+	"sync"
 
 	"github.com/spf13/cobra"
 )
 
 var shouldRunInteractively = false
+var registerOnce sync.Once
 
 // rootCmd is the top-level command, which will
 // hold all the subcommands such as gen, or any package-level
@@ -25,6 +27,11 @@ func AddCmd(cmd *cobra.Command) {
 
 // Execute the command and register the sub-commands.
 func Execute() error {
+	registerOnce.Do(registerCommands)
+	return rootCmd.Execute()
+}
+
+func registerCommands() {
 	newCmd.Flags().BoolVar(&enableExperimental, "exp", false, "Enable experimental features (GPA)")
 	newCmd.Flags().BoolVar(&nonInteractive, "non-interactive", false, "Create a project without prompts")
 	newCmd.Flags().StringVar(&projectFlags.Module, "module", "", "Go module path for the new project")
@@ -54,6 +61,4 @@ func Execute() error {
 	AddCmd(genCmd)
 	AddCmd(inertiaSSRCmd)
 	AddCmd(cacheCleanCmd)
-
-	return rootCmd.Execute()
 }

@@ -63,13 +63,17 @@ var newCmd = &cobra.Command{
 			}
 		}
 
-		EnsureEmptyDir(dirname)
+		if err := ensureEmptyDir(dirname); err != nil {
+			return err
+		}
 
 		if err := ScaffoldProject(*cfg, dirPath); err != nil {
 			log.Fatal("Error scaffolding project:", err)
 		}
 
-		renameModule(cfg.ModuleName, dirPath)
+		if err := renameModule(cfg.ModuleName, dirPath); err != nil {
+			return err
+		}
 		copyEnvFile(dirPath)
 		createSQLiteDatabase(dirPath)
 
@@ -206,7 +210,7 @@ func setEnvValue(path, key, value string) error {
 	return os.WriteFile(path, []byte(appended), 0o600)
 }
 
-func renameModule(newModuleName string, dirPath string) {
+func renameModule(newModuleName string, dirPath string) error {
 	fmt.Println("> Applying module name...")
 	err := filepath.Walk(dirPath, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
@@ -225,14 +229,15 @@ func renameModule(newModuleName string, dirPath string) {
 		return nil
 	})
 	if err != nil {
-		log.Fatal("Error replacing module name:", err)
+		return fmt.Errorf("replacing module name: %w", err)
 	}
 
 	// Rewriting the module path reorders imports, so the tree is formatted
 	// after the rename rather than before it.
 	if err := formatGoFiles(dirPath); err != nil {
-		log.Fatal("Error formatting generated code:", err)
+		return fmt.Errorf("formatting generated code: %w", err)
 	}
+	return nil
 }
 
 func npmBinary() string {

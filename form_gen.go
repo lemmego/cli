@@ -115,6 +115,8 @@ func (fg *FormGenerator) Generate(appendable ...[]byte) error {
 			}
 		}
 		err = fs.Write(fg.GetPackagePath()+"/"+strcase.ToCamel(fg.name)+".tsx", []byte(output))
+	} else {
+		return fmt.Errorf("unsupported form flavor %q", fg.flavor)
 	}
 
 	if err != nil {

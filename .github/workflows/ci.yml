@@ -30,6 +30,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       # go-version-file rather than a literal: the module declares the version
       # it needs. The old workflow ran a matrix of 1.25 and 1.26 against
@@ -73,3 +75,12 @@ jobs:
         run: |
           go install github.com/mattn/goveralls@v0.0.12
           goveralls -coverprofile=coverage.out -service=github
+
+      - name: Upload coverage to Codecov
+        if: github.event_name != 'pull_request'
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.out
+          disable_search: true
+          fail_ci_if_error: true
+          token: ${{ secrets.CODECOV_TOKEN }}

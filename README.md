@@ -1,6 +1,7 @@
 # lemmego/cli
 
 [![Coverage Status](https://coveralls.io/repos/github/lemmego/cli/badge.svg?branch=main)](https://coveralls.io/github/lemmego/cli?branch=main)
+[![codecov](https://codecov.io/gh/lemmego/cli/branch/main/graph/badge.svg)](https://codecov.io/gh/lemmego/cli)
 
 The `lemmego` binary. It generates a new project, generates code inside one,
 and runs the development loop for it.

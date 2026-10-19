@@ -103,10 +103,12 @@ func RemoveDirs(dirPath string, dirNames []string) {
 // EnsureBinary ensures the git binary is present in the system
 func EnsureBinary(binary string) {
 	// Check if the given binary is installed
-	if _, err := exec.LookPath(binary); err != nil {
+	if _, err := lookPath(binary); err != nil {
 		log.Fatal(fmt.Sprintf("Error: %s must be installed to use this command.", binary))
 	}
 }
+
+var lookPath = exec.LookPath
 
 // HasBinary returns if the given binary is installed in the system
 func HasBinary(binary string) bool {
@@ -124,17 +126,24 @@ func DirPath(dirname string) string {
 
 // EnsureEmptyDir ensures the directory in which the project should be created is empty
 func EnsureEmptyDir(dirname string) {
+	if err := ensureEmptyDir(dirname); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func ensureEmptyDir(dirname string) error {
 	dirPath, err := validateDestination(dirname)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	created, err := validateDestinationContents(dirPath)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if created {
 		fmt.Printf("> Creating new directory: %s\n", dirname)
 	}
+	return nil
 }
 
 func validateDestinationContents(dirPath string) (bool, error) {
@@ -219,15 +228,19 @@ func CreateDirIfNotExists(dirPath string) {
 
 // RunCommand runs a command in a specific directory
 func RunCommand(dirPath string, command string, args ...string) {
-	cmd := exec.Command(command, args...)
-	cmd.Dir = dirPath
-	output, err := cmd.CombinedOutput()
+	output, err := runCommand(dirPath, command, args...)
 	if len(output) > 0 {
 		fmt.Printf("%s\n", output)
 	}
 	if err != nil {
 		log.Fatalf("command %s %v failed: %v\n%s", command, args, err, output)
 	}
+}
+
+var runCommand = func(dirPath string, command string, args ...string) ([]byte, error) {
+	cmd := exec.Command(command, args...)
+	cmd.Dir = dirPath
+	return cmd.CombinedOutput()
 }
 
 const scaffoldCacheDir = ".cache/lemmego/scaffold"
