@@ -1,5 +1,6 @@
 # lemmego/cli
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/lemmego/cli.svg)](https://pkg.go.dev/github.com/lemmego/cli)
 [![Coverage Status](https://coveralls.io/repos/github/lemmego/cli/badge.svg?branch=main)](https://coveralls.io/github/lemmego/cli?branch=main)
 [![codecov](https://codecov.io/gh/lemmego/cli/branch/main/graph/badge.svg)](https://codecov.io/gh/lemmego/cli)
 
@@ -351,6 +352,28 @@ are invisible. Set `LEMMEGO_SCAFFOLD_SOURCE=embedded` to test an edit, or run
 
 The binary autoloads `.env` from the working directory, which is how
 `MIGRATIONS_DIR` and `APP_NAME` reach it from inside a project.
+
+## As a Go package
+
+**API reference: [pkg.go.dev/github.com/lemmego/cli](https://pkg.go.dev/github.com/lemmego/cli)**
+
+The binary is `./cmd`, which is a dozen lines over the `cli` package. The
+package itself is importable, and the parts of it worth knowing about:
+
+```go
+cli.AddCmd(cmd *cobra.Command)   // register a command on the root
+cli.Execute() error              // parse and run
+cli.ScaffoldProject(cfg ProjectConfig, destDir string) error
+```
+
+`AddCmd` is the extension point. A service provider can register its own
+commands on the root before `Execute` runs, which is how a module ships a
+command without this repository knowing about it.
+
+`ScaffoldProject` is `lemmego new` without the prompts, the module rename or
+the dependency install — it takes a fully populated `ProjectConfig` and
+writes the tree. `normalize` fills whatever is unset, so a partial literal is
+a valid configuration.
 
 ## Developing the CLI
 
