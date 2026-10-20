@@ -48,10 +48,31 @@ var runCmd = &cobra.Command{
 // real go tool by default, while tests can verify argument forwarding without
 // booting a generated application.
 var runApplication = func(args []string) error {
-	goRunCmd := exec.Command("go", append([]string{"run", "./cmd/app"}, args...)...)
-	goRunCmd.Stdout = os.Stdout
-	goRunCmd.Stderr = os.Stderr
-	return goRunCmd.Run()
+	return buildRunCommand(args).Run()
+}
+
+// buildRunCommand assembles the `go run` invocation, with all three standard
+// streams connected to this process's.
+//
+// **Stdin is the one that was missing**, and its absence was invisible for as
+// long as nothing read it. A child process with no Stdin set gets os.DevNull,
+// so every read returns EOF immediately — which for an ordinary command is
+// indistinguishable from "nobody typed anything", and for a command that
+// *expects* input is an instant, silent exit.
+//
+// It surfaced through `lemmego run mcp:serve`: the MCP server speaks JSON-RPC
+// over stdin and stdout, so it started, read EOF, treated that as the client
+// disconnecting, and exited successfully having written nothing. The editor
+// reported CONNECTION_CLOSED, which is true and says nothing about why.
+//
+// Any command that reads stdin was affected — a confirmation prompt, a piped
+// file, a password read — not just this one.
+func buildRunCommand(args []string) *exec.Cmd {
+	cmd := exec.Command("go", append([]string{"run", "./cmd/app"}, args...)...)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd
 }
 
 func needsFrontend(args []string) bool {
