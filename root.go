@@ -41,7 +41,7 @@ func registerCommands() {
 	newCmd.Flags().StringVar(&projectFlags.ORM, "orm", "", "SQL layer: orm (Lemmego), gorm, bun or none")
 	newCmd.Flags().StringVar(&projectFlags.Cache, "cache", "", "Cache: file, memory, redis or none")
 	newCmd.Flags().StringVar(&projectFlags.Queue, "queue", "", "Queue: sql, redis or none")
-	newCmd.Flags().StringVar(&projectFlags.Session, "session", "", "Sessions: file, memory or redis")
+	newCmd.Flags().StringVar(&projectFlags.Session, "session", "", "Sessions: file, memory, redis or database")
 	newCmd.Flags().StringVar(&projectFlags.Disk, "disk", "", "Default storage disk: local or s3")
 	newCmd.Flags().BoolVar(&projectFlags.Redis, "redis", false, "Use Redis for anything left unset")
 	newCmd.Flags().BoolVar(&projectFlags.Auth, "auth", true, "Scaffold authentication")

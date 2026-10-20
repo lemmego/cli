@@ -91,6 +91,15 @@ const (
 	SessionFile   SessionDriver = "file"
 	SessionMemory SessionDriver = "memory"
 	SessionRedis  SessionDriver = "redis"
+	// SessionDatabase keeps sessions in the project's own SQL database, in a
+	// `sessions` table the first migration creates. It needs a database, which
+	// validate enforces.
+	//
+	// It is the only durable choice that costs a deployment nothing extra:
+	// file needs a writable volume that outlives the container, and redis
+	// needs a service. Without it a container platform with neither leaves
+	// memory, which signs everybody out on every deploy.
+	SessionDatabase SessionDriver = "database"
 )
 
 // FilesystemDisk is the default storage disk.

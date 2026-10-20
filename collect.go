@@ -72,7 +72,7 @@ func collectNonInteractiveProjectConfig(dirname string) (*ProjectConfig, error) 
 		return nil, err
 	}
 	if cfg.SessionDriver, err = parseChoice("session", projectFlags.Session, sessionDefault,
-		SessionFile, SessionMemory, SessionRedis); err != nil {
+		SessionFile, SessionMemory, SessionRedis, SessionDatabase); err != nil {
 		return nil, err
 	}
 	if cfg.FilesystemDisk, err = parseChoice("disk", projectFlags.Disk, d.FilesystemDisk,
@@ -228,6 +228,7 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 					huh.NewOption("File", SessionFile),
 					huh.NewOption("Memory — lost on restart", SessionMemory),
 					huh.NewOption("Redis", SessionRedis),
+					huh.NewOption("Database — survives a deploy with no volume", SessionDatabase),
 				).
 				Value(&cfg.SessionDriver),
 			huh.NewSelect[FilesystemDisk]().

@@ -173,5 +173,8 @@ func validate(c ProjectConfig) error {
 	if c.EnableGPA && !c.HasDatabase() {
 		return fmt.Errorf("GPA needs a database: its provider is registered by the SQL connector")
 	}
+	if c.SessionDriver == SessionDatabase && !c.HasDatabase() {
+		return fmt.Errorf("database sessions need a database: choose one, or use the file, memory or redis session driver")
+	}
 	return nil
 }

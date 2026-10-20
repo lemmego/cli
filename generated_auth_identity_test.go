@@ -36,7 +36,31 @@ func authCombinations() []ProjectConfig {
 			})
 		}
 	}
-	return append(configs, frontendCombinations()...)
+	configs = append(configs, frontendCombinations()...)
+	return append(configs, sessionCombinations()...)
+}
+
+// The database session driver, once per dialect.
+//
+// Its migration is the only stub whose SQL branches on the database, because
+// scs ships a store per dialect and each reads `expiry` differently — so all
+// three branches have to be compiled or two of them are only ever read. The
+// provider ordering this driver depends on is also preset-independent, and
+// nothing else in the matrix selects it.
+func sessionCombinations() []ProjectConfig {
+	configs := make([]ProjectConfig, 0, 3)
+	for _, driver := range []SQLDriver{SQLSQLite, SQLMySQL, SQLPostgres} {
+		configs = append(configs, ProjectConfig{
+			Name:          "sessiondb" + string(driver),
+			ModuleName:    "example.com/contracts/sessiondb" + string(driver),
+			Preset:        PresetMVC,
+			ORM:           OrmLemmego,
+			SQLDriver:     driver,
+			SessionDriver: SessionDatabase,
+			EnableAuth:    true,
+		})
+	}
+	return configs
 }
 
 // generateTemplComponents runs `templ generate` when the project has .templ

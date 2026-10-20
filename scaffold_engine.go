@@ -318,8 +318,18 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 	// — no _test.go anywhere in the scaffold — so a user had no model for how
 	// to test a handler and no signal that apptest existed.
 	stubs["internal/routes/routes_test.go"] = "routes_test.go.tpl"
+	// Health endpoints, for every preset. api ships the handlers and
+	// registers no routes, so without this a deployed project has no path to
+	// point a container platform's health check at.
+	stubs["internal/routes/health.go"] = "health.go.tpl"
 	if td.HasDatabase() {
 		stubs["internal/configs/database.go"] = "database.go.tpl"
+	}
+	// The sessions table, only when the sessions live in it. Its column types
+	// differ per dialect because scs ships a store per dialect, so the
+	// template branches on the driver.
+	if td.SessionDriver == SessionDatabase {
+		stubs["internal/migrations/20250903034100_create_sessions_table.go"] = "sessions_migration.go.tpl"
 	}
 	if td.HasCache() {
 		stubs["internal/configs/cache.go"] = "cache.go.tpl"

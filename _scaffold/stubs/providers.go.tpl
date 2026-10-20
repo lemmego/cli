@@ -66,7 +66,6 @@ func LoadProviders() []app.Provider {
 		// default disk is for anything that should not be readable by
 		// anybody with the URL.
 		&fs.Provider{PublicDisk: "public", PublicEntireDisk: true},
-		&session.Provider{},
 		{{- if .UseORMConnector}}
 		&ormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
 		{{- end}}
@@ -76,6 +75,13 @@ func LoadProviders() []app.Provider {
 		{{- if .UseBunConnector}}
 		&bunconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
 		{{- end}}
+		// After the connectors, and that ordering is load-bearing rather than
+		// tidy: SESSION_DRIVER=database resolves the application's connection
+		// through db.Resolve, which finds nothing if this runs first. The
+		// provider refuses to boot in that case instead of falling back,
+		// because the fallback is an application that looks healthy and signs
+		// everybody out.
+		&session.Provider{},
 		{{- if .HasCache}}
 		&cache.Provider{},
 		{{- end}}
