@@ -59,3 +59,20 @@ func TestNamespacedCommandsSkipTheFrontendBuild(t *testing.T) {
 		t.Error("running the server should build the frontend")
 	}
 }
+
+// runApplication surfaces the go tool's failure rather than swallowing it.
+//
+// The cli package has no ./cmd/app, so `go run` fails immediately — which is
+// the point: the caller prints "Error running the app: %v", and if this
+// returned nil the user would be told nothing while their command silently
+// did not run.
+//
+// It exercises the real implementation rather than the test seam, so the one
+// line that actually shells out is covered by something that asserts a
+// behaviour instead of merely visiting it.
+func TestRunApplicationReportsAFailureToStart(t *testing.T) {
+	err := runApplication([]string{"--help"})
+	if err == nil {
+		t.Fatal("runApplication() = nil where there is no ./cmd/app to run")
+	}
+}
