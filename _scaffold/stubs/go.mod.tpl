@@ -16,6 +16,9 @@ require (
 	github.com/lemmego/templ {{.Version "github.com/lemmego/templ"}}
 	{{- end}}
 	github.com/lemmego/migration {{.Version "github.com/lemmego/migration"}}
+	{{- if .UseMCP}}
+	github.com/lemmego/mcp {{.Version "github.com/lemmego/mcp"}}
+	{{- end}}
 	{{- if .HasCache}}
 	github.com/lemmego/cache {{.Version "github.com/lemmego/cache"}}
 	{{- end}}

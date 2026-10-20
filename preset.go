@@ -67,6 +67,15 @@ type ProjectConfig struct {
 
 	EnableAuth bool
 	EnableGPA  bool
+
+	// EnableMCP registers lemmego/mcp, which serves this application's
+	// routes, schema, configuration and logs to an AI coding agent.
+	//
+	// On by default, because the point of it is that a new project works with
+	// an agent without being configured first. It costs the project 6 modules
+	// and about 2.4MB of binary, and it is registered only outside production
+	// — see providers.go.tpl.
+	EnableMCP bool
 }
 
 func (c ProjectConfig) HasDatabase() bool { return c.SQLDriver.Enabled() }
@@ -115,6 +124,7 @@ func defaultProjectConfig(name string) ProjectConfig {
 		FilesystemDisk: DiskLocal,
 		EnableAuth:     true,
 		EnableGPA:      false,
+		EnableMCP:      true,
 	}
 }
 
@@ -163,6 +173,9 @@ func normalize(c *ProjectConfig) {
 
 // validate rejects combinations that would scaffold cleanly and then fail at
 // runtime.
+// UseMCP reports whether to register the MCP server provider.
+func (c ProjectConfig) UseMCP() bool { return c.EnableMCP }
+
 func validate(c ProjectConfig) error {
 	if c.QueueDriver == QueueSQL && !c.HasDatabase() {
 		return fmt.Errorf("a SQL queue needs a database: choose a database, or use the redis queue or none")

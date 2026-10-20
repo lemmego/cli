@@ -35,6 +35,7 @@ type projectFlagSet struct {
 	Redis bool
 	Auth  bool
 	GPA   bool
+	MCP   bool
 }
 
 var projectFlags projectFlagSet

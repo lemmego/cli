@@ -46,7 +46,15 @@ func registerCommands() {
 	newCmd.Flags().BoolVar(&projectFlags.Redis, "redis", false, "Use Redis for anything left unset")
 	newCmd.Flags().BoolVar(&projectFlags.Auth, "auth", true, "Scaffold authentication")
 	newCmd.Flags().BoolVar(&projectFlags.GPA, "gpa", false, "Enable GPA")
+	newCmd.Flags().BoolVar(&projectFlags.MCP, "mcp", true,
+		"Register the MCP server, so an AI coding agent can read this application's state")
 	genCmd.PersistentFlags().BoolVarP(&shouldRunInteractively, "interactive", "i", false, "Run interactively")
+
+	mcpInstallCmd.Flags().StringSliceVar(&mcpAgents, "agent", nil,
+		"Configure only these agents (claude-code, cursor, codex, copilot, windsurf); repeatable")
+	mcpInstallCmd.Flags().BoolVar(&mcpNoSkills, "no-skills", false, "Do not write .ai/skills")
+	mcpInstallCmd.Flags().BoolVar(&mcpNoRules, "no-rules", false, "Do not create .ai/rules")
+	mcpInstallCmd.Flags().BoolVar(&mcpNoGuides, "no-guidelines", false, "Do not write the guideline block")
 
 	genCmd.AddCommand(handlerCmd)
 	genCmd.AddCommand(migrationCmd)
@@ -61,4 +69,5 @@ func registerCommands() {
 	AddCmd(genCmd)
 	AddCmd(inertiaSSRCmd)
 	AddCmd(cacheCleanCmd)
+	AddCmd(mcpInstallCmd)
 }

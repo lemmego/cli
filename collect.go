@@ -82,6 +82,7 @@ func collectNonInteractiveProjectConfig(dirname string) (*ProjectConfig, error) 
 
 	cfg.EnableAuth = projectFlags.Auth
 	cfg.EnableGPA = projectFlags.GPA
+	cfg.EnableMCP = projectFlags.MCP
 
 	normalize(&cfg)
 	if err := validate(cfg); err != nil {
@@ -247,6 +248,13 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 		).WithHideFunc(func() bool {
 			return custom() || !enableExperimental || !cfg.SQLDriver.Enabled()
 		}),
+
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title("Register the MCP server, so an AI coding agent can read this app's state?").
+				Description("Adds 6 modules and ~2.4MB. Registered outside production only.").
+				Value(&cfg.EnableMCP),
+		).WithHideFunc(custom),
 	)
 
 	if err := form.Run(); err != nil {

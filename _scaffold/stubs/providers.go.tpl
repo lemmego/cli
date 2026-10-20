@@ -10,6 +10,9 @@ import (
 	"github.com/lemmego/api/logger"
 	"github.com/lemmego/api/providers/fs"
 	"github.com/lemmego/api/providers/session"
+	{{- if and .UseMCP (not .EnableAuth)}}
+	"github.com/lemmego/api/config"
+	{{- end}}
 	{{- if .EnableAuth}}
 	"github.com/lemmego/api/config"
 	"github.com/lemmego/auth"
@@ -27,6 +30,9 @@ import (
 	{{- end}}
 	{{- if .HasQueue}}
 	"github.com/lemmego/queue"
+	{{- end}}
+	{{- if .UseMCP}}
+	lemmegomcp "github.com/lemmego/mcp"
 	{{- end}}
 	{{- if .InertiaProvider}}
 	"github.com/lemmego/inertia"
@@ -51,7 +57,7 @@ import (
 // that needs to store something finds this application's pool instead of
 // opening a second one of its own.
 func LoadProviders() []app.Provider {
-	return []app.Provider{
+	providers := []app.Provider{
 		// First, and for a reason worth keeping: every provider after this
 		// one logs while it boots, and a record emitted before this runs goes
 		// to slog's bare default instead of the file, format and level this
@@ -159,6 +165,25 @@ func LoadProviders() []app.Provider {
 		},
 		{{- end}}
 	}
+	{{- if .UseMCP}}
+
+	// The MCP server, last and only outside production.
+	//
+	// Last, because it reports on everything the providers above register —
+	// the database connection, the session store, the health checks — and a
+	// provider listed before them would resolve nothing.
+	//
+	// Not in production, because it serves this application's configuration
+	// and database to whatever starts it. It is stdio-only, so it is not
+	// reachable over the network and this is not a hole being closed; it is a
+	// development tool, and a production binary should not carry a command
+	// that reads the database. Remove the guard if you want it everywhere.
+	if config.MustEnv("APP_ENV", "development") != "production" {
+		providers = append(providers, &lemmegomcp.Provider{})
+	}
+	{{- end}}
+
+	return providers
 }
 
 {{- if and .HasQueue .EnableAuth}}

@@ -1,5 +1,5 @@
 {
-  "github.com/lemmego/api": "v0.6.5",
+  "github.com/lemmego/api": "v0.7.2",
   "github.com/lemmego/cache": "v0.2.2",
   "github.com/lemmego/auth": "v0.6.2",
   "github.com/lemmego/gormconnector": "v0.2.3",
@@ -39,5 +39,6 @@
   "github.com/lemmego/oauth2": "v0.3.2",
   "github.com/lemmego/templ": "v0.2.2",
   "@inertiajs/core": "^3.0.0",
-  "github.com/lemmego/apptest": "v0.2.5"
+  "github.com/lemmego/apptest": "v0.2.5",
+  "github.com/lemmego/mcp": "v0.1.4"
 }

@@ -58,6 +58,7 @@ func sessionCombinations() []ProjectConfig {
 			SQLDriver:     driver,
 			SessionDriver: SessionDatabase,
 			EnableAuth:    true,
+			EnableMCP:     true,
 		})
 	}
 	return configs
@@ -143,6 +144,11 @@ func frontendCombinations() []ProjectConfig {
 		ORM:        OrmLemmego,
 		SQLDriver:  SQLSQLite,
 		EnableAuth: true,
+		// Deliberately without MCP, so the omitted branch of
+		// providers.go.tpl is compiled too. Every other configuration in
+		// this matrix leaves EnableMCP false as well, but saying so here is
+		// what keeps it true if the default changes.
+		EnableMCP: false,
 	})
 }
 
