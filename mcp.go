@@ -76,6 +76,23 @@ run. The server itself is started by your editor, as "lemmego run mcp:serve".`,
 		for _, path := range result.Skipped {
 			fmt.Printf("  current  %s\n", path)
 		}
+		// The wiring check, and it is not a footnote: writing the
+		// configuration and having a server are different things, and only
+		// the first is this command's doing. `lemmego new` registers the
+		// provider; an existing project has nobody to do it, because Go has
+		// no equivalent of Composer's package auto-discovery.
+		//
+		// Without this the command reported success, the editor started a
+		// command that did not exist, and the only signal was a red cross
+		// with no reason given.
+		if instructions := install.WiringInstructions(result.Wiring); instructions != "" {
+			fmt.Println()
+			fmt.Println(strings.Repeat("-", 72))
+			fmt.Print(instructions)
+			fmt.Println(strings.Repeat("-", 72))
+			return nil
+		}
+
 		fmt.Println()
 		fmt.Println("Your editor may need restarting to pick up the MCP server.")
 		fmt.Println("Check it is working by asking your agent to list this application's routes.")

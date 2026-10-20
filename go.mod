@@ -8,7 +8,7 @@ require (
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lemmego/fsys v0.1.0
-	github.com/lemmego/mcp v0.1.4
+	github.com/lemmego/mcp v0.2.0
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/text v0.34.0
 )

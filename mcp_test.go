@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -246,4 +247,95 @@ func TestMCPInstallIsIdempotent(t *testing.T) {
 	if !strings.Contains(string(second), "My own notes.") {
 		t.Errorf("reinstalling lost the hand-written content:\n%s", second)
 	}
+}
+
+// The failure this test exists for: mcp:install wrote a correct .mcp.json for
+// a project with no server, reported success, and the editor showed a red
+// cross with no reason. Configuring an editor and having a server are
+// different things.
+func TestMCPInstallWarnsWhenTheProjectCannotServe(t *testing.T) {
+	resetMCPFlags(t)
+	dir := mcpProject(t) // go.mod has no lemmego/mcp, and there is no providers.go
+	chdirForTest(t, dir)
+
+	stdout := captureStdout(t, func() {
+		if err := mcpInstallCmd.RunE(mcpInstallCmd, nil); err != nil {
+			t.Fatalf("mcp:install error = %v", err)
+		}
+	})
+
+	for _, want := range []string{
+		"cannot serve MCP yet",
+		"go get github.com/lemmego/mcp",
+		"&lemmegomcp.Provider{}",
+	} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("the output does not mention %q:\n%s", want, stdout)
+		}
+	}
+	// The configuration is still written: it is correct, and becomes useful
+	// the moment the provider is added.
+	if _, err := os.Stat(filepath.Join(dir, ".mcp.json")); err != nil {
+		t.Errorf("the config was not written: %v", err)
+	}
+}
+
+// And a wired project must not be nagged.
+func TestMCPInstallStaysQuietWhenTheProjectCanServe(t *testing.T) {
+	resetMCPFlags(t)
+	dir := mcpProject(t)
+	chdirForTest(t, dir)
+
+	gomod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"),
+		append(gomod, []byte("\nrequire github.com/lemmego/mcp v0.2.0\n")...), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(dir, "bootstrap"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	providers := "package bootstrap\n\nimport lemmegomcp \"github.com/lemmego/mcp\"\n\n" +
+		"var _ = &lemmegomcp.Provider{}\n"
+	if err := os.WriteFile(filepath.Join(dir, "bootstrap", "providers.go"), []byte(providers), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	stdout := captureStdout(t, func() {
+		if err := mcpInstallCmd.RunE(mcpInstallCmd, nil); err != nil {
+			t.Fatalf("mcp:install error = %v", err)
+		}
+	})
+
+	if strings.Contains(stdout, "cannot serve MCP yet") {
+		t.Errorf("a wired project was warned anyway:\n%s", stdout)
+	}
+	if !strings.Contains(stdout, "restarting") {
+		t.Errorf("the ordinary closing message is missing:\n%s", stdout)
+	}
+}
+
+// captureStdout runs fn with os.Stdout redirected, and returns what it wrote.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	read, write, err := os.Pipe()
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous := os.Stdout
+	os.Stdout = write
+	defer func() { os.Stdout = previous }()
+
+	done := make(chan string, 1)
+	go func() {
+		var b strings.Builder
+		_, _ = io.Copy(&b, read)
+		done <- b.String()
+	}()
+
+	fn()
+	_ = write.Close()
+	return <-done
 }
