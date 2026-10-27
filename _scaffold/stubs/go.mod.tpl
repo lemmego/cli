@@ -16,6 +16,9 @@ require (
 	github.com/lemmego/templ {{.Version "github.com/lemmego/templ"}}
 	{{- end}}
 	github.com/lemmego/migration {{.Version "github.com/lemmego/migration"}}
+	{{- if eq .FilesystemDisk "s3"}}
+	github.com/lemmego/fsys {{.Version "github.com/lemmego/fsys"}}
+	{{- end}}
 	{{- if .UseMCP}}
 	github.com/lemmego/mcp {{.Version "github.com/lemmego/mcp"}}
 	{{- end}}

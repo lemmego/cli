@@ -10,6 +10,13 @@ import (
 	"github.com/lemmego/api/logger"
 	"github.com/lemmego/api/providers/fs"
 	"github.com/lemmego/api/providers/session"
+	{{- if eq .FilesystemDisk "s3"}}
+	// The S3 driver, for its side effect. fsys serves local from its root and
+	// every cloud driver from a subpackage, so a deployment links only the
+	// storage it uses. Without this the s3 disk fails when it is first
+	// opened, not at compile time.
+	_ "github.com/lemmego/fsys/s3"
+	{{- end}}
 	{{- if and .UseMCP (not .EnableAuth)}}
 	"github.com/lemmego/api/config"
 	{{- end}}
