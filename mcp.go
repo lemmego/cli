@@ -25,10 +25,10 @@ var (
 // project whose database credentials are not filled in yet cannot boot. That
 // is exactly when somebody wires up their editor.
 //
-// This repository has already paid for the mistake once: `lemmego new` used to
-// generate an app key by running the project's own command through `run`, the
-// boot failed on missing credentials, and every new project started life with
-// no key at all.
+// The same trap applies to anything a project needs before it can boot:
+// `lemmego new` once generated an app key by running the project's own
+// command through `run`, the boot failed on missing credentials, and a new
+// project started life with no key at all.
 var mcpInstallCmd = &cobra.Command{
 	Use:   "mcp:install",
 	Short: "Configure AI coding agents to use this project's MCP server",

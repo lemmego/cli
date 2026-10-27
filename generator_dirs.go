@@ -8,12 +8,10 @@ import (
 
 // ensurePackageDir creates the directory a generated file goes into.
 //
-// It did not used to matter: every generator wrote into a directory the
-// scaffold had already created. Now that a project says where its code lives,
-// the answer can be somewhere that does not exist yet — a project moving its
-// handlers to ./app/http/handlers should not have to create the directory by
-// hand first, and the alternative is a write failing with a bare
-// "no such file or directory".
+// A project says where its code lives, so the target can be somewhere that
+// does not exist yet: somebody moving their handlers to ./app/http/handlers
+// should not have to create the directory by hand, and without this the write
+// fails with a bare "no such file or directory".
 func ensurePackageDir(fs fsys.FS, path string) error {
 	if path == "" {
 		return fmt.Errorf("no output directory was resolved")

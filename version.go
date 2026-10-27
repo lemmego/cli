@@ -8,10 +8,9 @@ import (
 //
 //	-ldflags "-X github.com/lemmego/cli.version=v1.2.3"
 //
-// It is deliberately not a literal with a version in it. One of those sat in
-// root.go and went stale at 0.1.59, so every release from v0.1.60 to v0.1.66
-// reported a number seven releases old — and nothing failed, because a
-// hardcoded string is always valid. The only reliable version is one the
+// Do not replace this with a literal. A hardcoded version is always valid, so
+// it goes stale without anything failing: the number simply stops matching
+// the binary, and no test can tell. The only reliable version is one the
 // build supplies.
 var version string
 

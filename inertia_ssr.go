@@ -21,11 +21,10 @@ const ssrPidFile = ".ssr.pid"
 
 // Where `check` looks for the renderer.
 //
-// They are flags on `check` alone. `start` used to carry them too, which was
-// a lie in both directions: @inertiajs/core's server reads neither — its port
-// is fixed when the bundle is built, by the vite plugin's
-// inertia({ssr: {port}}) option — so passing --port only changed the address
-// start printed, not the one it listened on.
+// They are flags on `check` alone, and must not be added to `start`.
+// @inertiajs/core's server reads neither: its port is fixed when the bundle is
+// built, by the vite plugin's inertia({ssr: {port}}) option. A --port on
+// `start` would change the address printed and not the one listened on.
 var ssrPort int
 var ssrHost string
 
@@ -157,10 +156,10 @@ var inertiaSSRCheckCmd = &cobra.Command{
 // decide the component does not exist. **The status is therefore not required
 // to be 200** — a correct renderer answering this question says 500.
 //
-// Requiring 200 is what this used to do, and it meant `check` reported every
-// healthy renderer as unusable. lemmego/inertia's CheckSSR had the identical
-// bug and fixed it; the logic is duplicated rather than imported because the
-// CLI deliberately keeps the framework out of its dependency graph.
+// Requiring 200 here would report every healthy renderer as unusable.
+// lemmego/inertia's CheckSSR makes the same distinction; the logic is
+// duplicated rather than imported because the CLI keeps the framework out of
+// its dependency graph.
 //
 // That makes this a shallow check: it cannot tell a renderer that fails only
 // on unknown components from one that fails on all of them. Proving a renderer

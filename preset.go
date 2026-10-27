@@ -85,13 +85,10 @@ func (c ProjectConfig) HasQueue() bool    { return c.QueueDriver.Enabled() }
 // UsesRedis reports whether anything in the project needs a Redis connection,
 // and is the only condition under which the shared connection block is written.
 //
-// This replaced a standalone Redis toggle that was doing three unrelated jobs
-// at once — picking the session driver, picking the cache driver, and deciding
-// whether the connection block existed. That is why choosing the Redis session
-// driver in a project scaffolded without the toggle used to panic on the first
-// request: the driver was selected but the connection it reads was never
-// written. Deriving the block from the drivers makes that combination
-// impossible to express.
+// Deriving the block from the drivers, rather than from a separate toggle,
+// is what makes the broken combination inexpressible: a Redis session driver
+// selected while the connection block it reads was never written panics on
+// the first request.
 func (c ProjectConfig) UsesRedis() bool {
 	return c.CacheDriver == CacheRedis ||
 		c.QueueDriver == QueueRedis ||
@@ -106,11 +103,11 @@ func (c ProjectConfig) UseGPA() bool           { return c.HasDatabase() && c.Ena
 
 // defaultProjectConfig is the single source of defaults.
 //
-// Both entry points start from it: the interactive form seeds its fields here
-// and the flag path fills in whatever was not passed. They used to disagree —
-// interactively the default was whichever option happened to be listed first,
-// and non-interactively it was a bool flag's zero value — so the same command
-// produced different projects depending on how it was invoked.
+// Both entry points must start from it: the interactive form seeds its fields
+// here and the flag path fills in whatever was not passed. Defaults declared
+// separately drift — one becomes whichever option is listed first, the other
+// a bool flag's zero value — and then the same command produces different
+// projects depending on how it was invoked.
 func defaultProjectConfig(name string) ProjectConfig {
 	return ProjectConfig{
 		Name:           name,

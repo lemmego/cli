@@ -35,8 +35,8 @@ type InputConfig struct {
 
 // HasUnique reports whether any field needs a uniqueness check, so the
 // template imports api/db only when it will use it. An unused import does not
-// compile, which is how the generator used to emit broken code in the other
-// direction.
+// compile, so importing it unconditionally would emit a file that does not
+// build.
 func (c InputConfig) HasUnique() bool {
 	for _, field := range c.Fields {
 		if field.Unique {

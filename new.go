@@ -150,13 +150,11 @@ func copyEnvFile(dirPath string) {
 
 // generateAppKey writes a signing key into the new project's .env.
 //
-// Done here rather than by shelling out to `lemmego run appkey`, which is how
-// it used to work and could not work: `run` boots the generated application
-// to reach its command, and the application cannot boot until somebody has
-// filled in database credentials — so the step printed "Generating app key"
-// and then panicked with "DB Username is required", and every new project
-// started life with no key at all. An application with no key cannot
-// authenticate anybody, which is the first thing somebody tries.
+// Done here rather than by shelling out to `lemmego run appkey`, which cannot
+// work: `run` boots the generated application to reach its command, and the
+// application cannot boot until somebody has filled in database credentials.
+// That ordering leaves a new project with no key, and an application with no
+// key cannot authenticate anybody — which is the first thing somebody tries.
 //
 // The project keeps its own `appkey` command for rotating the key later, when
 // the database does work. This is only the first one.

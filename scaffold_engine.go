@@ -17,9 +17,9 @@ type templateData struct {
 	// ProjectConfig is embedded, so every choice and predicate on it is
 	// reachable from a template as {{.CacheDriver}} or {{.HasDatabase}}.
 	//
-	// Nothing here may shadow one of its fields. SessionDriver used to be
-	// declared here as a string, which shadowed the embedded choice: the
-	// template read one value while the configuration held another.
+	// Nothing here may shadow one of its fields. Redeclaring SessionDriver
+	// here, for instance, would shadow the embedded choice, and the template
+	// would read one value while the configuration held another.
 	ProjectConfig
 
 	versions         map[string]string
@@ -314,9 +314,8 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 	if td.Preset == PresetMVC {
 		stubs["internal/routes/web.go"] = "web.go.tpl"
 	}
-	// One example test, because a generated project used to ship none at all
-	// — no _test.go anywhere in the scaffold — so a user had no model for how
-	// to test a handler and no signal that apptest existed.
+	// One example test, so a generated project has a model for testing a
+	// handler and a visible signal that apptest exists.
 	stubs["internal/routes/routes_test.go"] = "routes_test.go.tpl"
 	// Health endpoints, for every preset. api ships the handlers and
 	// registers no routes, so without this a deployed project has no path to
