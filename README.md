@@ -14,9 +14,8 @@ lemmego run migrate up
 lemmego dev
 ```
 
-Everything below is what the binary actually does today. Where a command's
-behaviour is surprising, the reason is given rather than left to be
-rediscovered.
+Where a command's behaviour is surprising, this page says why, so you do not
+have to rediscover it.
 
 ## Installation
 
@@ -49,9 +48,8 @@ go install github.com/lemmego/cli/cmd@latest
 This installs a binary called `cmd`, because that is the package's directory
 name — rename it to `lemmego`. A binary built this way reports its module
 version; a binary built from a checkout reports `dev+<commit>`. Neither is a
-hardcoded string, deliberately: one used to live in `root.go` and went stale
-at `0.1.59`, so seven consecutive releases reported a number seven releases
-old and nothing failed, because a hardcoded version is always valid.
+hardcoded string, because a hardcoded version is always valid and so goes
+stale without anything failing.
 
 ```sh
 lemmego --version
@@ -134,11 +132,10 @@ fallback.
   project entirely: no dependency, no provider, no config file. The cache
   module's `null` store is registered and configured and simply misses every
   read.
-- **Redis is derived, never declared.** The connection block is written when
-  some driver needs it. A standalone toggle used to do three unrelated jobs
-  at once, which is why choosing the Redis session driver in a project
-  scaffolded without the toggle used to panic on the first request: the
-  driver was selected and the connection it reads was never written.
+- **Redis is derived, never declared.** The connection block is written
+  whenever some driver needs it — a session driver, a cache store, a queue —
+  so you cannot end up having selected a driver whose connection was never
+  written.
 
 Three combinations are refused rather than scaffolded, because each one
 builds cleanly and then fails at runtime: a SQL queue with no database,
@@ -172,14 +169,13 @@ Starts Vite (if there is a `package.json`), then air, then `templ generate
 and coloured. Ctrl+C stops all of them.
 
 **Vite goes first, and is waited for.** An Inertia project's server-side
-renderer *is* the Vite dev server: `@inertiajs/vite` serves
-`/__inertia_ssr`, and the address is published by writing `./public/hot`.
-Starting air first meant the Go process booted with no hot file, so the first
-page loads rendered against a standalone renderer that `dev` deliberately
-never starts — and strict SSR, which is on outside production, turns that
-into a 500 rather than a quiet degrade. A stale hot file from a previous run
-is removed before the wait, because it would be believed instantly and point
-at a dev server that is gone.
+renderer *is* the Vite dev server: `@inertiajs/vite` serves `/__inertia_ssr`,
+and the address is published by writing `./public/hot`. If the Go process
+booted first it would find no hot file and render against a standalone
+renderer that `dev` never starts — and strict SSR, which is on outside
+production, makes that a 500 rather than a quiet degrade. A stale hot file
+from a previous run is removed before the wait, because it would be believed
+instantly and point at a dev server that is gone.
 
 The wait is bounded at 20 seconds and is not fatal: a project may have a
 `package.json` and no Vite, and the right answer then is to start the Go
@@ -251,7 +247,7 @@ form` asks for the submit route and the fields.
 
 ### Where generated code goes
 
-Not from constants in this repository. A project's paths live in
+Not from constants in the CLI. Your project's paths live in
 `internal/configs`, which is Go source with an `init` function — only the
 project's own binary can evaluate it. So the CLI asks, by running
 `go run ./cmd/app config:paths` and reading one line of JSON, which is what
@@ -285,8 +281,8 @@ So `check` POSTs to `/render` and reads the answer. The server's own `/health`
 endpoint reports only that the process is up, which is the same thing a port
 dial reports.
 
-The component it asks for is deliberately one the bundle cannot have, so the
-renderer is *expected* to refuse it — and the refusal is the signal: the
+The component it asks for is one the bundle cannot have, so the renderer is
+*expected* to refuse it — and the refusal is the signal: the
 process is up, the module graph loaded, and the bundle's router ran far enough
 to decide the component does not exist. **A 500 is therefore a pass.** Three
 answers are not: an empty body (the bundle never loaded), a 404 (there is no
@@ -368,7 +364,7 @@ cli.ScaffoldProject(cfg ProjectConfig, destDir string) error
 
 `AddCmd` is the extension point. A service provider can register its own
 commands on the root before `Execute` runs, which is how a module ships a
-command without this repository knowing about it.
+command the CLI knows nothing about.
 
 `ScaffoldProject` is `lemmego new` without the prompts, the module rename or
 the dependency install — it takes a fully populated `ProjectConfig` and
