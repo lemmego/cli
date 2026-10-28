@@ -33,21 +33,24 @@ func TestTheAPIAnswersAPing(t *testing.T) {
 // The whole stack, against a real scratch database that is created, migrated
 // and dropped around the test.
 //
-// It **skips** when APPTEST_POSTGRES_DSN is unset rather than failing, which
-// is the right default and also a trap worth knowing about: a suite that
-// skips and a suite that passes are the same exit code. If `go test ./...`
-// finishes suspiciously fast, that is why. Set the variable:
+// The server comes from this application's own configuration, which under a
+// test binary means .env.test. There is no separate environment variable
+// naming a database, deliberately: two ways to say which server to use is two
+// things that can disagree.
 //
-//	export APPTEST_POSTGRES_DSN="postgres://you@127.0.0.1:5432/postgres?sslmode=disable"
+// It **fails rather than skipping** when that server is unreachable. Skipping
+// looks kinder and costs more: a suite that skips and a suite that passes are
+// the same exit code, so the only way to tell them apart is the clock. A test
+// that needs a database and has none has not passed.
 //
-// Point it at any database on the server you want the scratch ones created
-// on; this one is only used to issue CREATE DATABASE.
+// So make sure .env.test points at a Postgres you are running. The scratch
+// databases are created on it and dropped when each test ends.
 func TestTheApplicationBootsWithEveryProvider(t *testing.T) {
 	a := apptest.New(t,
 		apptest.WithConfig(config.GetAll()),
 		apptest.WithProviders(bootstrap.LoadProviders()...),
 		apptest.WithRoutes(bootstrap.LoadRoutes()...),
-		apptest.WithPostgres(),
+		apptest.WithScratchDB(),
 	)
 
 	// Through the real middleware chain this time — the session wrapper, the

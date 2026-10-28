@@ -98,3 +98,16 @@ REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
 {{- end}}
+{{- if .InertiaProvider}}
+
+# Server-side rendering, overriding what bootstrap/providers.go configured.
+#
+# Leave it unset and the application decides. Set it to false to work on a
+# page without a renderer in the way; set it to true to check that a page
+# really does render on the server before shipping it.
+#
+# In development the renderer is the Vite dev server, so `lemmego dev` starts
+# nothing extra. In production `lemmego inertia-ssr start` runs the built
+# bundle.
+INERTIA_SSR=
+{{- end}}
