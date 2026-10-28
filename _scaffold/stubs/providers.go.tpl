@@ -10,6 +10,19 @@ import (
 	"github.com/lemmego/api/logger"
 	"github.com/lemmego/api/providers/fs"
 	"github.com/lemmego/api/providers/session"
+{{- if .HasDatabase}}
+	// The database/sql driver, for its side effect. Registering one is the
+	// application's choice: migration, queue and ormconnector used to import
+	// sqlite, MySQL and Postgres together, so every project linked all three
+	// and paid for the two it had never configured.
+	{{- if eq (printf "%s" .SQLDriver) "sqlite"}}
+	_ "github.com/glebarez/go-sqlite"
+	{{- else if eq (printf "%s" .SQLDriver) "mysql"}}
+	_ "github.com/go-sql-driver/mysql"
+	{{- else if eq (printf "%s" .SQLDriver) "postgres"}}
+	_ "github.com/lib/pq"
+	{{- end}}
+{{- end}}
 	{{- if eq .FilesystemDisk "s3"}}
 	// The S3 driver, for its side effect. fsys serves local from its root and
 	// every cloud driver from a subpackage, so a deployment links only the

@@ -16,6 +16,13 @@ require (
 	github.com/lemmego/templ {{.Version "github.com/lemmego/templ"}}
 	{{- end}}
 	github.com/lemmego/migration {{.Version "github.com/lemmego/migration"}}
+	{{- if eq (printf "%s" .SQLDriver) "sqlite"}}
+	github.com/glebarez/go-sqlite {{.Version "github.com/glebarez/go-sqlite"}}
+	{{- else if eq (printf "%s" .SQLDriver) "mysql"}}
+	github.com/go-sql-driver/mysql {{.Version "github.com/go-sql-driver/mysql"}}
+	{{- else if eq (printf "%s" .SQLDriver) "postgres"}}
+	github.com/lib/pq {{.Version "github.com/lib/pq"}}
+	{{- end}}
 	{{- if eq .FilesystemDisk "s3"}}
 	github.com/lemmego/fsys {{.Version "github.com/lemmego/fsys"}}
 	{{- end}}
