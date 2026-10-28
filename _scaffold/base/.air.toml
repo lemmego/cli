@@ -6,14 +6,25 @@ tmp_dir = "tmp"
   args_bin = []
   bin = "./tmp/main"
   cmd = "CGO_ENABLED=0 go build -gcflags='-N -l' -o ./tmp/main ./cmd/app"
-  exclude_dir = ["assets", "tmp", "vendor", "node_modules", "testdata", "storage", "public", "static"]
+  # resources/js, resources/css and bootstrap/ssr hold nothing matching
+  # include_ext, so air could only ever watch them to discard the events.
+  # Vite owns the first two with HMR, and the third is its build output —
+  # watching your own artefacts is one include_ext edit away from a loop.
+  exclude_dir = ["assets", "tmp", "vendor", "node_modules", "testdata", "storage",
+                 "public", "static", "resources/js", "resources/css", "bootstrap/ssr"]
   exclude_file = []
   exclude_regex = ["_test.go", ".*_templ.go"]
   exclude_unchanged = false
   follow_symlink = false
   full_bin = ""
   include_dir = []
-  include_ext = ["go", "tpl", "tmpl", "gohtml", "templ", "html"]
+  # "env" is for .env, so editing a variable restarts the server. Without it
+  # air watches the file and ignores the event: the rebuild decision filters
+  # on include_ext, and .env has no extension to match — which makes a changed
+  # variable look like it did nothing, because the running process still holds
+  # the old environment. include_file = [".env"] does not help; it adds the
+  # watch that already existed and not the trigger.
+  include_ext = ["go", "tpl", "tmpl", "gohtml", "templ", "html", "env"]
   log = "build-errors.log"
   send_interrupt = true
   stop_on_error = true
