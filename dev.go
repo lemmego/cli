@@ -21,6 +21,14 @@ type devProcess struct {
 	cmd  *exec.Cmd
 }
 
+// ssrBundlePath is where `vite build --ssr` puts the renderer, following
+// laravel-vite-plugin's ssrOutputDirectory, which the scaffold keeps.
+const ssrBundlePath = "bootstrap/ssr/ssr.js"
+
+// standaloneRendererURL is where that bundle listens: @inertiajs/react's own
+// server defaults to 13714 and the generated bundle does not change it.
+const standaloneRendererURL = "http://127.0.0.1:13714"
+
 var devCmd = &cobra.Command{
 	Use:   "dev",
 	Short: "Start the development server with hot reload",
@@ -45,14 +53,42 @@ var devCmd = &cobra.Command{
 		// no longer the difference between working and not. It is the
 		// difference between a clean start and a few seconds of errors on the
 		// first page somebody opens, which is the first thing they see.
+		// The standalone renderer, when there is a built bundle to serve,
+		// because that is what keeps server rendering out of the reload loop.
+		//
+		// Rendering through the Vite dev server means Vite transforms the SSR
+		// module graph on demand: measured on a real application, the first
+		// render after Vite starts took the better part of a minute, which is
+		// long enough that strict SSR reports it as a broken renderer rather
+		// than a slow one. This process serves a bundle finished before it
+		// started, so there is no warm-up and rebuilding the Go binary does
+		// not touch it.
+		//
+		// The cost, which the printed line says out loud: the bundle is only
+		// as current as the last `vite build --ssr`. A component change
+		// reaches the browser over HMR and the server-rendered document only
+		// after a rebuild.
+		var appEnv []string
+		if fileExists(ssrBundlePath) {
+			processes = append(processes, startDevProcess("ssr", ".", "node", ssrBundlePath))
+			appEnv = append(appEnv, "INERTIA_SSR_URL="+standaloneRendererURL)
+			fmt.Printf("Server rendering through %s (%s).\n", standaloneRendererURL, ssrBundlePath)
+			fmt.Println("  Run `" + npmBinary() + " run build:ssr` after a component change for it to render server-side.")
+		}
+
 		if fileExists("package.json") {
 			processes = append(processes, startDevProcess("vite", ".", npmBinary(), "run", "dev"))
 			waitForViteHotFile()
+			if len(appEnv) == 0 && fileExists("resources/js/ssr.tsx") {
+				fmt.Println("Server rendering through the Vite dev server, so the first render " +
+					"after startup is slow while it transforms the module graph.")
+				fmt.Println("  Run `" + npmBinary() + " run build:ssr` once to render through the standalone server instead.")
+			}
 		}
 
 		// Always: air for Go hot reload
 		EnsureBinary("air")
-		processes = append(processes, startDevProcess("air", ".", "air"))
+		processes = append(processes, startDevProcessWithEnv("air", ".", appEnv, "air"))
 
 		// If templ files exist: templ generate --watch
 		if hasTemplFiles() {
@@ -69,8 +105,18 @@ var devCmd = &cobra.Command{
 }
 
 func startDevProcess(name string, dir string, command string, args ...string) devProcess {
+	return startDevProcessWithEnv(name, dir, nil, command, args...)
+}
+
+// startDevProcessWithEnv is startDevProcess with extra variables for the
+// child, which is how the renderer's address reaches the application: air
+// spawns the binary, so anything air inherits the application inherits too.
+func startDevProcessWithEnv(name string, dir string, env []string, command string, args ...string) devProcess {
 	cmd := exec.Command(command, args...)
 	cmd.Dir = dir
+	if len(env) > 0 {
+		cmd.Env = append(os.Environ(), env...)
+	}
 
 	prefix := processPrefix(name)
 
