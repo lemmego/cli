@@ -12,7 +12,7 @@ import inertia from "@inertiajs/vite";
 {{- end}}
 import path from "path";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   resolve: {
     alias: {
       "@": path.resolve("./resources/js"),
@@ -42,12 +42,24 @@ export default defineConfig({
     }),
     {{- end}}
     {{- if .InertiaProvider}}
-    inertia(),
+    // `lemmego dev` sets INERTIA_SSR_URL when it runs the standalone renderer
+    // from bootstrap/ssr/ssr.js. With something else rendering, this plugin's
+    // own dev endpoint is dead weight that is not free: it pulls every page
+    // component through ssrLoadModule the moment the dev server starts
+    // listening, on the one event loop that is also serving the client bundle.
+    // Measured on a real application, a first page load spent nine seconds
+    // waiting for its stylesheet behind that warm-up; with the endpoint off,
+    // the same request took 0.03s.
+    //
+    // `command === "build"` keeps it fully enabled for `vite build --ssr`,
+    // which is what produces bootstrap/ssr/ssr.js: the plugin wraps the entry
+    // with createServer and sets the rollup input, so disabling it there would
+    // leave no standalone renderer to point at.
+    inertia(command === "build" || !process.env.INERTIA_SSR_URL ? {} : { ssr: false }),
     {{- end}}
   ],
   {{- if .FrontendHasReact}}
   optimizeDeps: {
-    force: true,
     esbuildOptions: {
       loader: {
         ".js": "jsx",
@@ -61,4 +73,4 @@ export default defineConfig({
       host: "localhost",
     },
   },
-});
+}));

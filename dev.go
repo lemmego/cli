@@ -76,8 +76,17 @@ var devCmd = &cobra.Command{
 			fmt.Println("  Run `" + npmBinary() + " run build:ssr` after a component change for it to render server-side.")
 		}
 
+		// vite gets the same variable, and not only for symmetry: when
+		// something else is rendering, @inertiajs/vite's dev endpoint is dead
+		// weight that is not free — it pulls every page component through
+		// ssrLoadModule the moment the dev server starts listening, on the one
+		// event loop that is also serving the client bundle. Measured on a real
+		// application, a first page load spent nine seconds waiting for its
+		// stylesheet behind that warm-up. The generated vite config reads this
+		// variable and turns the endpoint off, so the renderer that is actually
+		// being used is the only one doing the work.
 		if fileExists("package.json") {
-			processes = append(processes, startDevProcess("vite", ".", npmBinary(), "run", "dev"))
+			processes = append(processes, startDevProcessWithEnv("vite", ".", appEnv, npmBinary(), "run", "dev"))
 			waitForViteHotFile()
 			if len(appEnv) == 0 && fileExists("resources/js/ssr.tsx") {
 				fmt.Println("Server rendering through the Vite dev server, so the first render " +
