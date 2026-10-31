@@ -1,4 +1,23 @@
-@import "tailwindcss";
+/*
+  source("../") restricts class-name detection to resources/.
+
+  Tailwind v4 otherwise walks the whole project tree looking for class names,
+  and a Lemmego project accumulates files it has no reason to read: the file
+  cache driver writes one per entry under storage/, and a real application was
+  measured at 83,000 of them, 315MB. Scanning those cost **9.6 seconds on
+  every stylesheet build** — in development that is every time Vite
+  invalidates the module, so the document answered in 60ms and the browser
+  then sat on a render-blocking <link> for nine seconds. Narrowing the base
+  makes the same build 0.054s.
+
+  `@source not "../../storage"` does not fix it — measured at 11.1s — because
+  the exclusion filters what the walk returns rather than preventing the walk.
+
+  resources/ rather than resources/js, so a class written in a template under
+  resources/views is still found. If you keep classes somewhere else, add it:
+  `@source "../../somewhere";`.
+*/
+@import "tailwindcss" source("../");
 
 @layer components {
   .input {
