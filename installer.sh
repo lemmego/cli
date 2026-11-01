@@ -1,7 +1,7 @@
 #!/bin/sh
 # Installs the Lemmego CLI.
 #
-#   curl -fsSL https://raw.githubusercontent.com/lemmego/cli/refs/heads/main/installer.sh | sudo sh
+#   curl -fsSL https://get.lemmego.org | sudo sh
 #
 # The version is resolved from the latest GitHub release, so this script does
 # not need editing when a new version ships. Override it to pin:

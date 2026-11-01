@@ -22,7 +22,7 @@ have to rediscover it.
 **macOS and Linux**
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/lemmego/cli/refs/heads/main/installer.sh | sudo sh
+curl -fsSL https://get.lemmego.org | sudo sh
 ```
 
 **Windows**
