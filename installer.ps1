@@ -1,6 +1,6 @@
 # Installs the Lemmego CLI on Windows.
 #
-#   irm https://raw.githubusercontent.com/lemmego/cli/refs/heads/main/installer.ps1 | iex
+#   irm https://get.lemmego.org/ps1 | iex
 #
 # The version is resolved from the latest GitHub release, so this script does
 # not need editing when a new version ships. Override it to pin:

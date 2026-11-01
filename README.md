@@ -28,7 +28,7 @@ curl -fsSL https://get.lemmego.org | sudo sh
 **Windows**
 
 ```powershell
-irm https://raw.githubusercontent.com/lemmego/cli/refs/heads/main/installer.ps1 | iex
+irm https://get.lemmego.org/ps1 | iex
 ```
 
 Both resolve the newest GitHub release and take the same two overrides, so
