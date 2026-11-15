@@ -46,12 +46,23 @@ DB_PARAMS={{if eq .SQLDriver "postgres"}}sslmode=disable{{end}}
 # Logging. Every one of these has a working default, so the whole block can be
 # deleted — and an empty value is treated as absent rather than as a choice.
 #
-# LOG_CHANNEL: console (readable lines on stderr), file (JSON in a rotating
-# file), json (JSON on stderr, for a platform that collects stdio), stack
-# (console and file together) or null. Defaults to console in development and
-# stack in production.
+# LOG_CHANNEL: console (readable lines, split across stdout and stderr), file
+# (JSON in a rotating file), json (JSON on stderr, for a platform that collects
+# stdio), stack (console and file together) or null. Defaults to console in
+# development and stack in production.
 LOG_CHANNEL=console
 LOG_LEVEL=debug
+# LOG_SPLIT_STREAMS: warn and above to stderr, everything below to stdout.
+#
+# On by default for a server and off for a CLI command, which is almost always
+# right: a container platform classifies a line by the stream it arrived on, so
+# a server writing info to stderr has every routine line recorded as an error,
+# while a command's stdout is the output somebody ran it for.
+#
+# Set it to true for a worker or a scheduler — a long-running server that
+# happens to be spelled as a subcommand, where the default answers the wrong
+# question. The same case LOG_QUIET exists for.
+# LOG_SPLIT_STREAMS=true
 LOG_FILE=storage/logs/app.log
 # Rotate on size as well as date, so a loop cannot fill the disk overnight.
 LOG_DAILY=true
