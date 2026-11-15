@@ -1,0 +1,37 @@
+{{/*
+  The HTML body for mailables.Welcome.
+
+  Plain, inlined and table-free on purpose. Email clients are not browsers:
+  Outlook renders with Word's engine, Gmail strips <style> blocks from the
+  head, and none of them agree about flexbox — so a layout that survives is
+  one that barely has a layout. Inline styles, no external CSS, no
+  JavaScript.
+
+  html/template escapes every value, so .Name arriving as somebody's idea of
+  a funny display name is text rather than markup.
+*/}}
+<!doctype html>
+<html>
+<body style="margin:0;padding:24px;background:#f6f7f9;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1f2328;">
+  <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:8px;padding:28px;">
+    <h1 style="margin:0 0 12px;font-size:20px;line-height:1.3;">Welcome, {{.Name}}</h1>
+
+    <p style="margin:0 0 16px;font-size:15px;line-height:1.55;">
+      Your account is ready. This email was rendered by
+      <code>resources/mail/welcome.gohtml</code> and sent through whichever
+      transport the application was configured with.
+    </p>
+
+    {{if .URL}}
+    <p style="margin:0 0 20px;">
+      <a href="{{.URL}}" style="display:inline-block;background:#1f6feb;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:6px;font-size:15px;">Open the app</a>
+    </p>
+
+    <p style="margin:0;font-size:13px;line-height:1.5;color:#656d76;">
+      If the button does not work, paste this into your browser:<br>
+      {{.URL}}
+    </p>
+    {{end}}
+  </div>
+</body>
+</html>

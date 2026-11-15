@@ -12,5 +12,8 @@ func LoadRoutes() []app.RouteCallback {
 		{{- end}}
 		routes.ApiRoutes,
 		routes.HealthRoutes,
+		{{- range .ModuleRoutes}}
+		routes.{{.}},
+		{{- end}}
 	}
 }

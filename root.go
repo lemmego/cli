@@ -1,6 +1,8 @@
 package cli
 
 import (
+	"strings"
+
 	"fmt"
 	"os"
 	"sync"
@@ -48,6 +50,8 @@ func registerCommands() {
 	newCmd.Flags().BoolVar(&projectFlags.GPA, "gpa", false, "Enable GPA")
 	newCmd.Flags().BoolVar(&projectFlags.MCP, "mcp", true,
 		"Register the MCP server, so an AI coding agent can read this application's state")
+	newCmd.Flags().StringVar(&projectFlags.Modules, "modules", "",
+		"Optional modules, comma-separated: "+strings.Join(ModuleNames(), ", ")+"; or all")
 	genCmd.PersistentFlags().BoolVarP(&shouldRunInteractively, "interactive", "i", false, "Run interactively")
 
 	mcpInstallCmd.Flags().StringSliceVar(&mcpAgents, "agent", nil,

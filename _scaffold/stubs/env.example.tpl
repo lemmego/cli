@@ -111,3 +111,69 @@ REDIS_PASSWORD=
 # bundle.
 INERTIA_SSR=
 {{- end}}
+{{- if .HasModule "mail"}}
+
+# Mail. With no MAIL_HOST the log transport stays in place, which writes the
+# envelope and — outside production — the rendered body, so a verification
+# link is readable during development without a relay.
+MAIL_HOST=
+MAIL_PORT=587
+MAIL_USERNAME=
+MAIL_PASSWORD=
+MAIL_FROM_ADDRESS=hello@example.com
+MAIL_FROM_NAME={{.Name}}
+{{- end}}
+{{- if .HasModule "media"}}
+
+# The disk renditions are written to. public is served at /storage/, which is
+# what an <img> needs; put originals somewhere unserved if you keep them.
+MEDIA_DISK=public
+{{- end}}
+{{- if .HasModule "search"}}
+
+# postgres searches the tsvector columns this application already has and
+# needs nothing else running. meilisearch keeps its own index and must be
+# reachable at boot. See internal/configs/search.go.
+SEARCH_ENGINE=postgres
+SEARCH_PREFIX={{.Name}}_
+SEARCH_MEILISEARCH_URL=http://127.0.0.1:7700
+SEARCH_MEILISEARCH_KEY=
+{{- end}}
+{{- if .HasModule "pay"}}
+
+# Stripe. Livemode is derived from the secret key's own prefix, so there is no
+# flag here that could disagree with the key in use.
+#
+# Two webhook secrets, so one can be rotated without an interval in which
+# events are refused — and a refused event is money moving with nothing
+# recording it. `stripe listen --forward-to localhost:8080/pay/webhook`
+# prints one for development.
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_WEBHOOK_SECRET_PREVIOUS=
+{{- end}}
+{{- if .HasModule "broadcast"}}
+
+# memory for one process, redis for more than one. An unreachable Redis fails
+# the boot rather than falling back, because a fallback passes staging — where
+# there is one replica and every subscriber is local — and then delivers half
+# the events in production.
+BROADCAST_BUS=memory
+{{- end}}
+{{- if .HasModule "observe"}}
+
+# Off unless this says otherwise, because an entry holds request headers,
+# bound parameters and SQL.
+OBSERVE_ENABLED=false
+# The dashboard is at /observe and an empty token means nobody gets in,
+# which is deliberate: it serves every statement this application has run.
+OBSERVE_TOKEN=
+# The fraction of requests recorded, 0 to 1. Leave it at 1 in development.
+OBSERVE_SAMPLE=1
+{{- end}}
+{{- if .HasModule "i18n"}}
+
+# Where the catalogue lives. The provider searches upward from the working
+# directory, so `go test ./internal/...` finds it too.
+I18N_PATH=resources/lang
+{{- end}}

@@ -63,4 +63,7 @@ require (
 	{{- if .InertiaProvider}}
 	github.com/lemmego/inertia {{.Version "github.com/lemmego/inertia"}}
 	{{- end}}
+	{{- range .ModulePins}}
+	{{.}}
+	{{- end}}
 )

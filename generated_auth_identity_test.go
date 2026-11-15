@@ -37,7 +37,58 @@ func authCombinations() []ProjectConfig {
 		}
 	}
 	configs = append(configs, frontendCombinations()...)
-	return append(configs, sessionCombinations()...)
+	configs = append(configs, sessionCombinations()...)
+	return append(configs, moduleCombinations()...)
+}
+
+// The optional modules.
+//
+// Two configurations rather than one per module, and that is the whole value
+// of them: each overlay contributes a file to internal/plugins and a route
+// callback that bootstrap/routes.go names, so a project with all of them
+// compiles every overlay against every other one — which is where a
+// duplicated helper, a clashing identifier or a missing import shows up.
+// Eleven separate projects would each compile one overlay in isolation and
+// miss exactly that.
+//
+// Postgres for the first, because search and the two dialect-limited modules
+// are only offered there, so it is the only configuration that reaches every
+// overlay. SQLite for the second, which is what `lemmego new` defaults to and
+// therefore what most people will generate: it proves the eight modules that
+// do not need Postgres compile without it.
+func moduleCombinations() []ProjectConfig {
+	everything := make([]Module, 0, len(AllModules))
+	for _, spec := range AllModules {
+		everything = append(everything, spec.name)
+	}
+
+	postgres := ProjectConfig{
+		Name:          "modsall",
+		ModuleName:    "example.com/contracts/modsall",
+		Preset:        PresetMVC,
+		ORM:           OrmLemmego,
+		SQLDriver:     SQLPostgres,
+		CacheDriver:   CacheFile,
+		QueueDriver:   QueueSQL,
+		SessionDriver: SessionFile,
+		EnableAuth:    true,
+		Modules:       everything,
+	}
+
+	// Whatever the default project can have, which withdraws search and
+	// leaves the rest.
+	sqlite := postgres
+	sqlite.Name = "modssqlite"
+	sqlite.ModuleName = "example.com/contracts/modssqlite"
+	sqlite.SQLDriver = SQLSQLite
+	sqlite.Modules = nil
+	for _, spec := range AllModules {
+		if spec.requires == nil || spec.requires(sqlite) == nil {
+			sqlite.Modules = append(sqlite.Modules, spec.name)
+		}
+	}
+
+	return []ProjectConfig{postgres, sqlite}
 }
 
 // The database session driver, once per dialect.

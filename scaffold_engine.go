@@ -39,6 +39,52 @@ func (td templateData) Version(pkg string) string {
 	return "latest"
 }
 
+// ModulePins renders one `require` line per selected module.
+//
+// Built here rather than in go.mod.tpl so the import path and the pinned
+// version come from one place: a template that assembled the path itself
+// could name a module versions.json does not pin, and Version would answer
+// "latest" — which is the pinning policy defeated silently, in the one file
+// whose job is to pin.
+func (td templateData) ModulePins() []string {
+	lines := make([]string, 0, len(td.Modules))
+	for _, m := range td.Modules {
+		path := ModuleImportPath(m)
+		lines = append(lines, path+" "+td.Version(path))
+	}
+	return lines
+}
+
+// ModuleRoutes names the route callback each selected module contributes.
+//
+// Only the modules whose example is reachable over HTTP are here. observe is
+// not: it mounts its own dashboard from its provider.
+//
+// Listed rather than discovered, because the alternative is reflection over
+// a package that does not exist yet at compile time.
+func (td templateData) ModuleRoutes() []string {
+	callbacks := map[Module]string{
+		ModuleAuthz:     "AuthzRoutes",
+		ModuleBroadcast: "BroadcastRoutes",
+		ModuleI18n:      "I18nRoutes",
+		ModuleMail:      "MailRoutes",
+		ModuleMedia:     "MediaRoutes",
+		ModuleNotify:    "NotifyRoutes",
+		ModulePay:       "PayRoutes",
+		ModuleRatelimit: "RatelimitRoutes",
+		ModuleSearch:    "SearchRoutes",
+		ModuleSeo:       "SeoRoutes",
+	}
+
+	var names []string
+	for _, m := range td.Modules {
+		if name, ok := callbacks[m]; ok {
+			names = append(names, name)
+		}
+	}
+	return names
+}
+
 // scaffoldSource bundles an fs.FS with its internal path prefix.
 type scaffoldSource struct {
 	fs     fs.FS
@@ -218,6 +264,15 @@ func resolveOverlays(cfg ProjectConfig) []string {
 		overlays = append(overlays, overlay)
 	}
 
+	// Last, and after the auth overlay rather than before it: a module
+	// overlay may ship a policy or a notification that refers to the user
+	// model the auth overlay writes, and the later overlay wins where two
+	// name the same path. Modules is sorted by normalize, so the order here
+	// is the same on every run.
+	for _, m := range cfg.Modules {
+		overlays = append(overlays, "overlays/mod_"+string(m))
+	}
+
 	return overlays
 }
 
@@ -329,6 +384,25 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 	// template branches on the driver.
 	if td.SessionDriver == SessionDatabase {
 		stubs["internal/migrations/20250903034100_create_sessions_table.go"] = "sessions_migration.go.tpl"
+	}
+	// A module that creates a table ships its migration here rather than in
+	// its overlay, because an overlay file is copied verbatim and the DDL
+	// differs per dialect.
+	if td.HasModule("notify") {
+		stubs["internal/migrations/20261110000000_create_notifications_table.go"] = "notifications_migration.go.tpl"
+	}
+	// The instrumented driver, which is what makes observe record queries.
+	// A stub rather than an overlay file because the driver it wraps is the
+	// one this project chose, and an overlay is copied verbatim.
+	if td.HasModule("observe") && td.HasDatabase() {
+		stubs["internal/plugins/observe_driver.go"] = "observe_driver.go.tpl"
+	}
+	if td.HasModule("search") {
+		stubs["internal/configs/search.go"] = "search.go.tpl"
+		stubs["internal/migrations/20261112000000_create_notes_table.go"] = "notes_migration.go.tpl"
+	}
+	if td.HasModule("pay") {
+		stubs["internal/migrations/20261111000000_create_subscriptions_table.go"] = "subscriptions_migration.go.tpl"
 	}
 	if td.HasCache() {
 		stubs["internal/configs/cache.go"] = "cache.go.tpl"

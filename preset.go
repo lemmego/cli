@@ -76,6 +76,16 @@ type ProjectConfig struct {
 	// and about 2.4MB of binary, and it is registered only outside production
 	// — see providers.go.tpl.
 	EnableMCP bool
+
+	// Modules are the optional lemmego modules this project is scaffolded
+	// with, each contributing its provider registration, its configuration
+	// and one worked example. See module.go.
+	//
+	// Empty by default. A module that is not selected is not imported, not
+	// pinned in go.mod and contributes no .env block, so a default project
+	// links none of them — which is the whole point of the list being a
+	// choice rather than a bundle.
+	Modules []Module
 }
 
 func (c ProjectConfig) HasDatabase() bool { return c.SQLDriver.Enabled() }
@@ -166,6 +176,8 @@ func normalize(c *ProjectConfig) {
 	if c.Preset != PresetMVC {
 		c.Frontend = FrontendGoTemplates
 	}
+
+	normalizeModules(c)
 }
 
 // validate rejects combinations that would scaffold cleanly and then fail at
@@ -185,6 +197,9 @@ func validate(c ProjectConfig) error {
 	}
 	if c.SessionDriver == SessionDatabase && !c.HasDatabase() {
 		return fmt.Errorf("database sessions need a database: choose one, or use the file, memory or redis session driver")
+	}
+	if err := validateModules(c); err != nil {
+		return err
 	}
 	return nil
 }

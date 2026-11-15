@@ -1,0 +1,13 @@
+{
+  "greeting": "Hello, :name",
+
+  "items": {
+    "one": ":count item",
+    "other": ":count items"
+  },
+
+  "nav": {
+    "home": "Home",
+    "about": "About"
+  }
+}

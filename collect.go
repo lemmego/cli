@@ -84,6 +84,13 @@ func collectNonInteractiveProjectConfig(dirname string) (*ProjectConfig, error) 
 	cfg.EnableGPA = projectFlags.GPA
 	cfg.EnableMCP = projectFlags.MCP
 
+	// After the flags above and before normalize, because "all" means every
+	// module this configuration can support and that answer depends on the
+	// database, the cache and auth having been decided.
+	if cfg.Modules, err = ParseModules(projectFlags.Modules, cfg); err != nil {
+		return nil, err
+	}
+
 	normalize(&cfg)
 	if err := validate(cfg); err != nil {
 		return nil, err
@@ -254,6 +261,33 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 				Title("Register the MCP server, so an AI coding agent can read this app's state?").
 				Description("Adds 6 modules and ~2.4MB. Registered outside production only.").
 				Value(&cfg.EnableMCP),
+		).WithHideFunc(custom),
+
+		huh.NewGroup(
+			huh.NewMultiSelect[Module]().
+				Title("Optional modules").
+				Description("Each adds its provider, its .env block and one worked example. Space to toggle.").
+				// Withdrawn rather than offered and refused, the way the SQL
+				// queue option already is: a module whose prerequisites this
+				// project does not meet is not in the list, so the form
+				// cannot produce a combination validate would turn down.
+				//
+				// The dependencies are on answers given earlier in this same
+				// form — authz on authentication, ratelimit on the cache,
+				// three of them on the database — which is why this group is
+				// last.
+				OptionsFunc(func() []huh.Option[Module] {
+					options := make([]huh.Option[Module], 0, len(AllModules))
+					for _, spec := range AllModules {
+						if spec.requires != nil && spec.requires(cfg) != nil {
+							continue
+						}
+						options = append(options, huh.NewOption(
+							string(spec.name)+" — "+spec.summary, spec.name))
+					}
+					return options
+				}, &cfg).
+				Value(&cfg.Modules),
 		).WithHideFunc(custom),
 	)
 

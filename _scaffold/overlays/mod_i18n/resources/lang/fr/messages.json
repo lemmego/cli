@@ -1,0 +1,8 @@
+{
+  "greeting": "Bonjour, :name",
+
+  "items": {
+    "one": ":count élément",
+    "other": ":count éléments"
+  }
+}

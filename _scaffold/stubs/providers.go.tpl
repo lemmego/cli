@@ -66,6 +66,17 @@ import (
 	{{- if .UseBunConnector}}
 	"github.com/lemmego/bunconnector"
 	{{- end}}
+	{{- if .HasModule "i18n"}}{{if .InertiaProvider}}
+	"github.com/lemmego/i18n/i18ninertia"
+	{{- end}}{{- end}}
+	{{- if .AnyModule}}
+	// Each optional module is constructed in internal/plugins, one file per
+	// module, rather than inline here. The interesting part of wiring one is
+	// never the literal — it is which service it borrows, what it refuses to
+	// do without, and why it sits where it does in this list — and that reads
+	// better beside the module's own example than in a list of twenty.
+	"github.com/lemmego/lemmego/internal/plugins"
+	{{- end}}
 )
 
 // LoadProviders lists the providers the application boots, in order.
@@ -93,13 +104,31 @@ func LoadProviders() []app.Provider {
 		// anybody with the URL.
 		&fs.Provider{PublicDisk: "public", PublicEntireDisk: true},
 		{{- if .UseORMConnector}}
-		&ormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
+		&ormconnector.Provider{
+			{{- if .UseGPA}}
+			UseGPA: true,
+			{{- end}}
+			{{- if .HasModule "observe"}}
+			// The instrumented driver, so observe sees every statement —
+			// see internal/plugins/observe_driver.go. The dialect still
+			// comes from DB_DRIVER, so the migrator and the ORM generate
+			// the same SQL.
+			Driver: plugins.ObservedDriver,
+			{{- end}}
+		},
 		{{- end}}
 		{{- if .UseGormConnector}}
 		&gormconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
 		{{- end}}
 		{{- if .UseBunConnector}}
 		&bunconnector.Provider{{if .UseGPA}}{UseGPA: true}{{else}}{}{{end}},
+		{{- end}}
+		{{- if .HasModule "observe"}}
+		// After the connector whose pool it borrows, and before anything
+		// whose queries are worth seeing. Off unless OBSERVE_ENABLED says
+		// otherwise, because what it records includes request headers, bound
+		// parameters and SQL.
+		plugins.Observe(),
 		{{- end}}
 		// After the connectors, and that ordering is load-bearing rather than
 		// tidy: SESSION_DRIVER=database resolves the application's connection
@@ -135,6 +164,12 @@ func LoadProviders() []app.Provider {
 			// open it.
 			{{- end}}
 		},
+		{{- end}}
+		{{- if .HasModule "i18n"}}
+		// Before the renderer, because the catalogue reaches the browser as a
+		// shared Inertia prop and the locale has to be resolvable by the time
+		// a page is built.
+		plugins.I18n(),
 		{{- end}}
 		{{- if .InertiaProvider}}
 		&inertia.Provider{
@@ -183,6 +218,47 @@ func LoadProviders() []app.Provider {
 				JwtSecret: config.MustEnv("JWT_SECRET", config.MustEnv("APP_KEY", "")),
 			},
 		},
+		{{- end}}
+		{{- if .HasModule "i18n"}}{{if .InertiaProvider}}
+		// The catalogue as a shared prop, and <html lang> as template data.
+		// After the renderer, whose shared props it registers into.
+		&i18ninertia.Provider{},
+		{{- end}}{{- end}}
+		{{- if .HasModule "authz"}}
+		// After auth, because a policy's first question is who is asking and
+		// the answer is resolved by the provider above.
+		plugins.Authz(),
+		{{- end}}
+		{{- if .HasModule "seo"}}
+		plugins.Seo(),
+		{{- end}}
+		{{- if .HasModule "media"}}
+		plugins.Media(),
+		{{- end}}
+		{{- if .HasModule "search"}}
+		// After the connector, whose pool the postgres engine searches. A
+		// configured engine that cannot be reached fails the boot rather
+		// than answering nothing, which is why this is not lenient.
+		plugins.Search(),
+		{{- end}}
+		{{- if .HasModule "pay"}}
+		plugins.Pay(),
+		{{- end}}
+		{{- if .HasModule "mail"}}
+		plugins.Mail(),
+		{{- end}}
+		{{- if .HasModule "broadcast"}}
+		// Realtime, after auth: a private channel is authorised against the
+		// signed-in user, so the auth service has to be registered before a
+		// subscriber arrives.
+		plugins.Broadcast(),
+		{{- end}}
+		{{- if .HasModule "notify"}}
+		// Last of the three it wires together: the database channel borrows
+		// this application's pool, and the mail and broadcast channels are
+		// the providers above. A channel registered before the thing it
+		// delivers through would deliver nothing and say nothing about it.
+		&plugins.NotificationsProvider{},
 		{{- end}}
 	}
 	{{- if .UseMCP}}

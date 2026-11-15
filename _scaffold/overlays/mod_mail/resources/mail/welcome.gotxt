@@ -1,0 +1,10 @@
+Welcome, {{.Name}}
+
+Your account is ready.
+{{if .URL}}
+Open the app: {{.URL}}
+{{end}}
+--
+This is the plain-text alternative, from resources/mail/welcome.gotxt. It is
+not a courtesy: a message with no text part scores worse with every spam
+filter, and some clients show the HTML source when there is nothing else.

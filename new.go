@@ -36,6 +36,9 @@ type projectFlagSet struct {
 	Auth  bool
 	GPA   bool
 	MCP   bool
+
+	// Modules is a comma-separated list of optional modules, or "all".
+	Modules string
 }
 
 var projectFlags projectFlagSet
