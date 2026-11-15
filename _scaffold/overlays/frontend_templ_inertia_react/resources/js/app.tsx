@@ -1,5 +1,7 @@
 import { createInertiaApp } from "@inertiajs/react";
 import { createRoot } from "react-dom/client";
+
+import { withShell } from "./Layouts/resolve";
 import "../css/app.css";
 
 // The setup argument is deliberately not annotated.
@@ -17,7 +19,10 @@ createInertiaApp({
     if (!page) {
       throw new Error(`Inertia: no page component at ./Pages/${name}.tsx`);
     }
-    return page as never;
+    // Where a page gets its layout. See Layouts/resolve.tsx — doing it here
+    // rather than in each page is what makes the shell inherited rather than
+    // remembered, and what makes it persistent across a client-side visit.
+    return withShell(page, name) as never;
   },
   setup({ el, App, props }) {
     createRoot(el).render(<App {...props} />);

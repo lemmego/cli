@@ -19,6 +19,9 @@ every frontend preset rather than for adding more parse-level checks.
 */}}
 import (
 	"github.com/lemmego/api/app"
+	{{- if .HasModule "seo"}}
+	"github.com/lemmego/seo"
+	{{- end}}
 	{{- if .InertiaProvider}}
 	"github.com/lemmego/inertia"
 	{{- else if .FrontendHasTempl}}
@@ -32,6 +35,21 @@ import (
 func WebRoutes(a app.App) {
 	r := a.Router()
 	r.Get("/{$}", func(c app.Context) error {
+		{{- if .HasModule "seo"}}
+		// Called immediately before responding, which is where it belongs:
+		// Share renders the head in Go and publishes it as template data, so
+		// the title, the canonical URL and any structured data survive a
+		// server-rendering failure — the kind that answers 200 and looks
+		// perfect to a human while a crawler receives an empty container.
+		//
+		// seo.Middleware already shares the site-wide defaults for every
+		// page, so this is what adds the part only this page knows.
+		seo.Share(c, seo.Meta{
+			Title:       "Home",
+			Description: "A new Lemmego application.",
+			Canonical:   c.Request().URL.Path,
+		})
+		{{- end}}
 		{{- if .InertiaProvider}}
 		return inertia.Respond(c, "{{if .FrontendHasVue}}IndexVue{{else}}IndexReact{{end}}", nil)
 		{{- else if .FrontendHasTempl}}

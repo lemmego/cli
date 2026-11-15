@@ -4,6 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     {{viteTags "resources/css/app.css"}}
+    {{/*
+      The head rendered in Go, published by seo.Share — so the title, the
+      canonical URL and any structured data survive a server-rendering
+      failure, which answers 200 and looks perfect to a human while a crawler
+      receives an empty container.
+
+      Empty when nothing published one, which is the case for a project
+      without lemmego/seo. There is deliberately no static <title> beside it:
+      seo renders its own, and two <title> tags in one document is the bug
+      Components/useDocumentTitle.ts exists to avoid — a browser uses the
+      first and a crawler reports a duplicate.
+    */}}
+    {{ .seoHead }}
     {{ .inertiaHead }}
 </head>
 

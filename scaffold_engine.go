@@ -423,6 +423,14 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 		stubs["tsconfig.json"] = "tsconfig.json.tpl"
 		stubs["vite.config.js"] = "vite.config.js.tpl"
 	}
+	// The React hook over the broadcast client, which only a React project
+	// can compile: it imports React, and tsconfig.json typechecks everything
+	// under resources/js — so a Vue project given this file fails to
+	// typecheck. The client itself imports nothing and ships in the overlay
+	// for every frontend.
+	if td.HasModule("broadcast") && td.FrontendHasReact {
+		stubs["resources/js/lib/useBroadcast.ts"] = "use_broadcast.ts.tpl"
+	}
 	if td.InertiaProvider {
 		// Tells Inertia's types that a validation error is a []string, which
 		// is what this framework flashes. Without it the generated forms are

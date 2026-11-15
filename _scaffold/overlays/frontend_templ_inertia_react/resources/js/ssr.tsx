@@ -1,6 +1,8 @@
 import { createInertiaApp } from "@inertiajs/react";
 import createServer from "@inertiajs/react/server";
 import ReactDOMServer from "react-dom/server";
+
+import { withShell } from "./Layouts/resolve";
 import "../css/app.css";
 
 // createServer is @inertiajs/core's own server — /render, /health, /shutdown and
@@ -20,7 +22,9 @@ createServer((page) =>
       if (!component) {
         throw new Error(`Inertia SSR: no page component at ./Pages/${name}.tsx`);
       }
-      return component as never;
+      // The same layout the browser applies. A shell applied on one side only
+      // is the hydration mismatch that reads as a page flashing on load.
+      return withShell(component, name) as never;
     },
     setup: ({ App, props }) => <App {...props} />,
   }),
