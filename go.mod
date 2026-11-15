@@ -10,6 +10,7 @@ require (
 	github.com/lemmego/fsys v0.1.0
 	github.com/lemmego/mcp v0.2.0
 	github.com/spf13/cobra v1.8.1
+	golang.org/x/mod v0.42.0
 	golang.org/x/text v0.34.0
 )
 

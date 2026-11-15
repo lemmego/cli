@@ -3,6 +3,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && vite build --ssr",
+    {{- if .FrontendHasReact}}
+    "typecheck": "tsc --noEmit",
+    {{- end}}
+    {{- if .FrontendHasVue}}
+    "typecheck": "vue-tsc --noEmit",
+    {{- end}}
     {{- if .InertiaProvider}}
     "build:ssr": "vite build --ssr",
     "ssr": "node bootstrap/ssr/ssr.js",
@@ -22,6 +28,7 @@
     {{- if .FrontendHasVue}}
     "@vitejs/plugin-vue": "{{.Version "@vitejs/plugin-vue"}}",
     "@vue/server-renderer": "{{.Version "@vue/server-renderer"}}",
+    "vue-tsc": "{{.Version "vue-tsc"}}",
     {{- end}}
     "laravel-vite-plugin": "{{.Version "laravel-vite-plugin"}}",
     "tailwindcss": "{{.Version "tailwindcss"}}",

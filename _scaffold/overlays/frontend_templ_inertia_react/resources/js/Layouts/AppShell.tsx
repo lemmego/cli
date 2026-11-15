@@ -2,7 +2,6 @@ import { Link, usePage } from "@inertiajs/react";
 import type { ReactNode } from "react";
 
 import { Toasts } from "../Components/Toasts";
-import { useFlashToasts } from "../lib/useFlashToasts";
 
 // The application shell: whatever is on every page.
 //
@@ -22,10 +21,6 @@ import { useFlashToasts } from "../lib/useFlashToasts";
 // empty container that answers 200. Read globals inside an effect.
 
 export function AppShell({ children }: { children: ReactNode }) {
-  // Raised here rather than in each page, so a handler that redirects with a
-  // flash message does not also have to remember to show it.
-  useFlashToasts();
-
   const page = usePage();
 
   return (
@@ -65,6 +60,13 @@ export function AppShell({ children }: { children: ReactNode }) {
       */}
       <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
 
+      {/*
+        Rendered here, so every page has the stack without asking. What *fills*
+        it is wired in app.tsx instead — see lib/flash.ts for why a server
+        flash cannot be read from a component. A page that opts out of this
+        layout therefore has nowhere to show one, which is usually right for
+        the sign-in form that opts out.
+      */}
       <Toasts />
     </div>
   );

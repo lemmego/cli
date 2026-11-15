@@ -27,5 +27,17 @@ declare module "@inertiajs/core" {
       // bootstrap registers with inertia.Share — so every page reads them
       // with a type instead of a cast.
     };
+    // The conventional flash keys, named so `flash.success` is a string
+    // rather than `unknown`. The index signature is kept, because a project
+    // is free to flash a key of its own and should not have to edit this to
+    // do it — resources/js/lib/flash.ts raises a toast for these four and
+    // leaves the rest to whichever page cares.
+    flashDataType: {
+      success?: string;
+      warning?: string;
+      error?: string;
+      info?: string;
+      [key: string]: unknown;
+    };
   }
 }

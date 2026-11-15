@@ -1,6 +1,7 @@
 import { createInertiaApp } from "@inertiajs/react";
 import { createRoot } from "react-dom/client";
 
+import { listenForFlash } from "./lib/flash";
 import { withShell } from "./Layouts/resolve";
 import "../css/app.css";
 
@@ -11,6 +12,11 @@ import "../css/app.css";
 // three overloads — so annotating it makes `tsc --noEmit` fail on this file while
 // Vite, which strips types with esbuild and never typechecks, builds it happily.
 // Inference gets this exactly right.
+
+// Every flash message the server sends, for as long as this tab is open —
+// including the one that arrived with this document. See lib/flash.ts, and in
+// particular why there is nothing to do in setup for the first page.
+listenForFlash();
 
 createInertiaApp({
   resolve: (name) => {

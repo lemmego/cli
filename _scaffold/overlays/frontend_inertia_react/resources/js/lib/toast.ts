@@ -8,12 +8,20 @@
 // arriving.
 //
 // A module-level store rather than a context provider, because there is no tree
-// to scope it to: a toast raised by a hook in the layout and one raised by a
-// page are the same queue, and a provider would make them two.
+// to scope it to: a toast raised from the layout and one raised from a page are
+// the same queue, and a provider would make them two. It is also why this file
+// is byte-identical in the React and the Vue overlays — it imports neither.
 //
 // Nothing here touches a browser global, so the module is inert under
 // renderToString. The server renders an empty list, which is also what the
 // client renders first — so there is no hydration mismatch to reconcile.
+//
+// That the queue is never written *while rendering* is the other half, and it
+// is what keeps a module-level store safe in a renderer: one Node process
+// serves every request from one copy of this module, so a toast raised during
+// a render would still be in the queue for the next visitor's. Everything that
+// raises one does so from an effect or a mounted hook, neither of which runs
+// on the server.
 
 export type ToastTone = "neutral" | "good" | "warn" | "bad";
 

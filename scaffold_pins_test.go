@@ -13,6 +13,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"golang.org/x/mod/semver"
 )
 
 // Every lemmego module the scaffold imports has to be pinned.
@@ -203,7 +205,7 @@ func TestEveryPinIsTheLatestPublishedVersion(t *testing.T) {
 		pin := pins[module]
 		newest := latest[module].version
 		if reason, held := deliberateHolds[module]; held {
-			if pin == newest {
+			if semver.Compare(pin, newest) >= 0 {
 				t.Errorf("%s is pinned at %s, which is now the latest published version, "+
 					"so its deliberateHolds entry is obsolete and should be removed.\n"+
 					"It said: %s", module, pin, reason)
@@ -213,7 +215,25 @@ func TestEveryPinIsTheLatestPublishedVersion(t *testing.T) {
 			continue
 		}
 
-		if pin != newest {
+		switch semver.Compare(pin, newest) {
+		case 0:
+			// The ordinary case.
+		case 1:
+			// The pin is *ahead* of what the proxy will admit to, which is
+			// what a release looks like for the next half hour: the version
+			// resolves, and @latest is served from a cache that has not
+			// expired. Reading that as a stale pin would fail this test on
+			// every release day — including the one that bumps the pin it
+			// just published, which is the commit this test exists to
+			// accompany.
+			//
+			// It is a note rather than silence because the other way to get
+			// here is a typo for a version that does not exist, and the pin
+			// resolution test below is what would catch that.
+			t.Logf("note: %s is pinned at %s, ahead of the proxy's cached latest (%s) — "+
+				"a tag published in the last half hour looks exactly like this",
+				module, pin, newest)
+		default:
 			t.Errorf("%s is pinned at %s but %s is published.\n"+
 				"`lemmego new` resolves this pin, so a stale one hands every new project "+
 				"the bugs that release fixed.\nBump it in _scaffold/stubs/versions.json and "+

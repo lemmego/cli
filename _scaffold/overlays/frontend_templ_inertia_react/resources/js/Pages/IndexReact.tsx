@@ -50,7 +50,7 @@ const IndexReact = () => {
       {/*
         The toast queue, raised from anywhere and rendered once by AppShell.
         A handler that redirects with a flash message needs none of this — see
-        lib/useFlashToasts.ts, which the shell already calls.
+        lib/flash.ts, which app.tsx already wires up.
       */}
       <button
         type="button"
