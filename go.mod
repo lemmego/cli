@@ -7,11 +7,11 @@ require (
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joho/godotenv v1.5.1
-	github.com/lemmego/fsys v0.2.0
+	github.com/lemmego/fsys v0.2.1
 	github.com/lemmego/mcp v0.2.0
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/mod v0.42.0
-	golang.org/x/text v0.34.0
+	golang.org/x/text v0.44.0
 )
 
 require (
@@ -40,6 +40,6 @@ require (
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.42.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 )
