@@ -59,9 +59,13 @@ export default defineConfig(({ command }) => ({
     {{- end}}
   ],
   {{- if .FrontendHasReact}}
+  // Dependency prebundling is Rolldown's job as of Vite 8, not esbuild's, so
+  // this is `rolldownOptions.moduleTypes` rather than `esbuildOptions.loader`.
+  // The old key is not an error — Vite warns on every build and ignores it,
+  // which is the shape of a setting that quietly stops applying.
   optimizeDeps: {
-    esbuildOptions: {
-      loader: {
+    rolldownOptions: {
+      moduleTypes: {
         ".js": "jsx",
         ".ts": "tsx",
       },

@@ -143,11 +143,27 @@ const moduleProxy = "https://proxy.golang.org"
 // keyed by module path, valued by the reason.
 //
 // An entry turns a failure into a logged note, which is the difference between
-// a decision and drift. It is empty today because none of the six pins that
-// had fallen behind was held back for a reason: api simply sat at v0.9.0
-// against v0.12.0, and every project `lemmego new` generated had a password
-// minimum that did nothing.
-var deliberateHolds = map[string]string{}
+// a decision and drift. None of the six lemmego pins that had fallen behind
+// was held back for a reason: api simply sat at v0.9.0 against v0.12.0, and
+// every project `lemmego new` generated had a password minimum that did
+// nothing.
+//
+// The one entry is a third-party pin, and it is the case this mechanism was
+// written for.
+var deliberateHolds = map[string]string{
+	// TypeScript 7 is current and the React presets typecheck cleanly on it.
+	// vue-tsc cannot run against it: 3.3.14 is the newest published version,
+	// its peer range says typescript >=5.0.0, and it still resolves an
+	// internal path inside the typescript package that 7 no longer exports —
+	// `npm run typecheck` in a generated Vue project dies with
+	// ERR_PACKAGE_PATH_NOT_EXPORTED from resolveTscPath before it reads a
+	// single file. The build is unaffected, since Vite strips types and never
+	// typechecks, which is exactly how this would have shipped unnoticed.
+	//
+	// versions.json is one table for every preset, so the Vue presets decide
+	// this pin. Revisit when a vue-tsc release claims TypeScript 7.
+	"typescript": "vue-tsc 3.3.14, the newest release, cannot resolve TypeScript 7's exports",
+}
 
 // TestEveryPinIsTheLatestPublishedVersion is the guard the two tests above are
 // missing.

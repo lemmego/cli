@@ -12,10 +12,14 @@
     "jsx": "preserve",
     {{- end}}
     "strict": true,
+    // No baseUrl: TypeScript 7 removed it, and these paths never needed it.
+    // A `paths` entry has resolved relative to this file since TypeScript 4.1,
+    // so dropping it typechecks identically on 5 and on 7 — where leaving it
+    // in is error TS5102 on the first line of the config, before any source
+    // file is read.
     "paths": {
       "@/*": ["./resources/js/*"]
     },
-    "baseUrl": ".",
     "skipLibCheck": true,
     "noEmit": true,
     // Vite's ambient types declare import.meta.glob and import.meta.env.
