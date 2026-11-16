@@ -38,7 +38,7 @@
   "github.com/lemmego/notify": "v0.5.1",
   "github.com/lemmego/oauth2": "v0.4.0",
   "github.com/lemmego/observe": "v0.11.1",
-  "github.com/lemmego/orm": "v0.2.0",
+  "github.com/lemmego/orm": "v0.3.0",
   "github.com/lemmego/ormconnector": "v0.5.1",
   "github.com/lemmego/pay": "v0.3.0",
   "github.com/lemmego/queue": "v0.6.0",
