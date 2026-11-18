@@ -26,7 +26,7 @@
     // Without them an entry point fails to typecheck on its very first line,
     // which is easy to miss because Vite strips types with esbuild and never
     // typechecks at all. This file is only written for a project that has Vite.
-    "types": ["vite/client"]
+    "types": ["vite/client", "@lemmego/vite/client"]
   },
   {{- if .FrontendHasVue}}
   // The typecheck is package.json's `typecheck` script, which is `vue-tsc`.

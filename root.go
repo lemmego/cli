@@ -70,6 +70,7 @@ func registerCommands() {
 	AddCmd(runCmd)
 	AddCmd(devCmd)
 	AddCmd(buildCmd)
+	AddCmd(frontendCmd)
 	AddCmd(genCmd)
 	AddCmd(inertiaSSRCmd)
 	AddCmd(cacheCleanCmd)

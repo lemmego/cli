@@ -21,8 +21,8 @@ type devProcess struct {
 	cmd  *exec.Cmd
 }
 
-// ssrBundlePath is where `vite build --ssr` puts the renderer, following
-// laravel-vite-plugin's ssrOutputDirectory, which the scaffold keeps.
+// ssrBundlePath is where `vite build --ssr` puts the renderer, following the
+// @lemmego/vite ssrOutputDirectory used by the scaffold.
 const ssrBundlePath = "bootstrap/ssr/ssr.js"
 
 // standaloneRendererURL is where that bundle listens: @inertiajs/react's own
@@ -37,6 +37,7 @@ var devCmd = &cobra.Command{
 			fmt.Println("Error: This does not appear to be a Lemmego project directory.")
 			return
 		}
+		syncFrontendIfProject()
 
 		var processes []devProcess
 

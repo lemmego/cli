@@ -1,5 +1,5 @@
 import { defineConfig } from "vite";
-import laravel from "laravel-vite-plugin";
+import lemmego from "@lemmego/vite";
 {{- if .FrontendHasReact}}
 import react from "@vitejs/plugin-react";
 {{- end}}
@@ -20,7 +20,7 @@ export default defineConfig(({ command }) => ({
   },
   plugins: [
     tailwindcss(),
-    laravel({
+    lemmego({
       {{- if .FrontendHasReact}}
       input: ["resources/js/app.tsx", "resources/css/app.css"],
       ssr: "resources/js/ssr.tsx",

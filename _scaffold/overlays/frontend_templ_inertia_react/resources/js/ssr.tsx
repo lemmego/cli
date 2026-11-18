@@ -1,6 +1,8 @@
 import { createInertiaApp } from "@inertiajs/react";
 import createServer from "@inertiajs/react/server";
 import ReactDOMServer from "react-dom/server";
+import { resolvePageComponent } from "@lemmego/vite/inertia-helpers";
+import { pages as packagePages } from "virtual:lemmego/pages";
 
 import { withShell } from "./Layouts/resolve";
 import "../css/app.css";
@@ -17,14 +19,15 @@ createServer((page) =>
     page,
     render: ReactDOMServer.renderToString,
     resolve: (name) => {
-      const pages = import.meta.glob("./Pages/**/*.tsx", { eager: true });
-      const component = pages[`./Pages/${name}.tsx`];
-      if (!component) {
-        throw new Error(`Inertia SSR: no page component at ./Pages/${name}.tsx`);
-      }
-      // The same layout the browser applies. A shell applied on one side only
-      // is the hydration mismatch that reads as a page flashing on load.
-      return withShell(component, name) as never;
+      const pages = {
+        ...packagePages,
+        ...Object.fromEntries(Object.entries(import.meta.glob("./Pages/**/*.tsx")).map(([path, loader]) => [
+          path.replace(/^\.\/Pages\//, "").replace(/\.tsx$/, ""),
+          loader,
+        ])),
+      };
+      if (!pages[name]) throw new Error(`Inertia SSR: no page component at ${name}`);
+      return resolvePageComponent(name, pages).then((module) => withShell(module, name) as never);
     },
     setup: ({ App, props }) => <App {...props} />,
   }),

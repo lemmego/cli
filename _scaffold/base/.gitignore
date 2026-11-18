@@ -3,6 +3,7 @@
 tmp/
 .DS_Store
 node_modules/
+.lemmego/
 .idea/
 .vscode/
 package-lock.json

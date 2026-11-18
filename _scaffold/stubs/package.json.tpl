@@ -2,7 +2,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build && vite build --ssr",
+    "build": "vite build",
     {{- if .FrontendHasReact}}
     "typecheck": "tsc --noEmit",
     {{- end}}
@@ -30,7 +30,7 @@
     "@vue/server-renderer": "{{.Version "@vue/server-renderer"}}",
     "vue-tsc": "{{.Version "vue-tsc"}}",
     {{- end}}
-    "laravel-vite-plugin": "{{.Version "laravel-vite-plugin"}}",
+    "@lemmego/vite": "{{.Version "@lemmego/vite"}}",
     "tailwindcss": "{{.Version "tailwindcss"}}",
     "typescript": "{{.Version "typescript"}}",
     "vite": "{{.Version "vite"}}"

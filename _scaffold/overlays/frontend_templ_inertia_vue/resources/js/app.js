@@ -1,6 +1,7 @@
 import { createApp, h } from "vue";
 import { createInertiaApp } from "@inertiajs/vue3";
-import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers";
+import { resolvePageComponent } from "@lemmego/vite/inertia-helpers";
+import { pages as packagePages } from "virtual:lemmego/pages";
 
 import { listenForFlash } from "./lib/flash";
 import { withShell } from "./Layouts/resolve";
@@ -21,7 +22,13 @@ createInertiaApp({
     // lazy, so a page is fetched when somebody first visits it instead of
     // being bundled into the entry. The React overlay globs eagerly and so
     // applies the shell inline.
-    resolvePageComponent(`./Pages/${name}.vue`, import.meta.glob("./Pages/**/*.vue")).then((module) =>
+      resolvePageComponent(name, {
+        ...packagePages,
+        ...Object.fromEntries(Object.entries(import.meta.glob("./Pages/**/*.vue")).map(([path, loader]) => [
+          path.replace(/^\.\/Pages\//, "").replace(/\.vue$/, ""),
+          loader,
+        ])),
+      }).then((module) =>
       withShell(module, name),
     ),
   setup({ el, App, props, plugin }) {

@@ -46,6 +46,7 @@ var buildCmd = &cobra.Command{
 			fmt.Println("Error: This does not appear to be a Lemmego project directory.")
 			return
 		}
+		syncFrontendIfProject()
 
 		if hasTemplFiles() {
 			fmt.Println("> Generating templ files...")

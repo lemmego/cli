@@ -1,5 +1,7 @@
 import { createInertiaApp } from "@inertiajs/react";
 import { createRoot } from "react-dom/client";
+import { resolvePageComponent } from "@lemmego/vite/inertia-helpers";
+import { pages as packagePages } from "virtual:lemmego/pages";
 
 import { listenForFlash } from "./lib/flash";
 import { withShell } from "./Layouts/resolve";
@@ -20,15 +22,15 @@ listenForFlash();
 
 createInertiaApp({
   resolve: (name) => {
-    const pages = import.meta.glob("./Pages/**/*.tsx", { eager: true });
-    const page = pages[`./Pages/${name}.tsx`];
-    if (!page) {
-      throw new Error(`Inertia: no page component at ./Pages/${name}.tsx`);
-    }
-    // Where a page gets its layout. See Layouts/resolve.tsx — doing it here
-    // rather than in each page is what makes the shell inherited rather than
-    // remembered, and what makes it persistent across a client-side visit.
-    return withShell(page, name) as never;
+    const pages = {
+      ...packagePages,
+      ...Object.fromEntries(Object.entries(import.meta.glob("./Pages/**/*.tsx")).map(([path, loader]) => [
+        path.replace(/^\.\/Pages\//, "").replace(/\.tsx$/, ""),
+        loader,
+      ])),
+    };
+    if (!pages[name]) throw new Error(`Inertia: no page component at ${name}`);
+    return resolvePageComponent(name, pages).then((module) => withShell(module, name) as never);
   },
   setup({ el, App, props }) {
     createRoot(el).render(<App {...props} />);

@@ -170,7 +170,7 @@ func TestEveryThirdPartyGoPinIsRecentEnough(t *testing.T) {
 // ^19.0.0 installs 19.3.1 today and needs no bump. A major is the one gap a
 // range cannot cross by itself, and it is what actually bit — typescript sat
 // at ^5.4.5 while 7.0.2 was current, and vite at 7.1.4 against 8.3.8 while
-// laravel-vite-plugin 3 and @vitejs/plugin-react 6 both require vite ^8.
+// @lemmego/vite 0.1 and @vitejs/plugin-react 6 both require vite ^8.
 //
 // The limitation is worth stating rather than hiding: an *exact* npm pin that
 // falls behind within its major would pass this test. vite was the only one,

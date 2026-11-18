@@ -25,6 +25,7 @@ var runCmd = &cobra.Command{
 
 		// Only build frontend assets for commands that serve HTTP
 		if needsFrontend(args) {
+			syncFrontendIfProject()
 			if hasTemplFiles() {
 				EnsureBinary("templ")
 				fmt.Println("> Generating templ files...")

@@ -137,7 +137,8 @@ func TestGeneratedNodeManifestMatchesFrontendPreset(t *testing.T) {
 			root := scaffoldContractProject(t, cfg)
 
 			var packageJSON struct {
-				Scripts map[string]string `json:"scripts"`
+				Scripts         map[string]string `json:"scripts"`
+				DevDependencies map[string]string `json:"devDependencies"`
 			}
 			data, err := os.ReadFile(filepath.Join(root, "package.json"))
 			if err != nil {
@@ -149,6 +150,12 @@ func TestGeneratedNodeManifestMatchesFrontendPreset(t *testing.T) {
 			if packageJSON.Scripts["build"] == "" {
 				t.Fatal("package.json must define a build script")
 			}
+			if packageJSON.DevDependencies["@lemmego/vite"] != "^0.1.1" {
+				t.Fatalf("package.json must pin @lemmego/vite at ^0.1.1: %v", packageJSON.DevDependencies)
+			}
+			if _, ok := packageJSON.DevDependencies["laravel-vite-plugin"]; ok {
+				t.Fatal("package.json must not depend on laravel-vite-plugin")
+			}
 
 			vite := readScaffoldFile(t, root, "vite.config.js")
 			wantEntry := "resources/js/app.js"
@@ -157,6 +164,12 @@ func TestGeneratedNodeManifestMatchesFrontendPreset(t *testing.T) {
 			}
 			if !strings.Contains(vite, wantEntry) {
 				t.Fatalf("vite config does not include %s", wantEntry)
+			}
+			if !strings.Contains(vite, `import lemmego from "@lemmego/vite"`) || !strings.Contains(vite, "lemmego({") {
+				t.Fatalf("vite config does not use @lemmego/vite: %s", vite)
+			}
+			if strings.Contains(vite, "laravel-vite-plugin") || strings.Contains(vite, "laravel({") {
+				t.Fatalf("vite config still uses Laravel's Vite plugin: %s", vite)
 			}
 		})
 	}
