@@ -384,7 +384,8 @@ func treeMatches(t *testing.T, dir string, want *regexp.Regexp) bool {
 func TestModuleNamesAreStable(t *testing.T) {
 	want := []string{
 		"authz", "broadcast", "i18n", "mail", "media", "notify",
-		"observe", "pay", "ratelimit", "search", "seo",
+		"oauth2", "observe", "pay", "ratelimit", "rbac", "search", "seo",
+		"tenancy",
 	}
 
 	got := ModuleNames()

@@ -53,6 +53,9 @@ import (
 	{{- if .HasQueue}}
 	"github.com/lemmego/queue"
 	{{- end}}
+	{{- if .HasModule "oauth2"}}
+	_ "github.com/lemmego/oauth2"
+	{{- end}}
 	{{- if .UseMCP}}
 	lemmegomcp "github.com/lemmego/mcp"
 	{{- end}}
@@ -226,10 +229,22 @@ func LoadProviders() []app.Provider {
 		// After the renderer, whose shared props it registers into.
 		&i18ninertia.Provider{},
 		{{- end}}{{- end}}
-		{{- if .HasModule "authz"}}
+		{{- if or (.HasModule "authz") (.HasModule "rbac")}}
 		// After auth, because a policy's first question is who is asking and
-		// the answer is resolved by the provider above.
+		// the answer is resolved by the provider above. One provider carries
+		// both typed policies and database-backed permissions.
 		plugins.Authz(),
+		{{- end}}
+		{{- if .HasModule "tenancy"}}
+		// After the connector and after auth: the registry reads the tenants
+		// table, and the binding comes from the signed-in user's membership.
+		plugins.Tenancy(),
+		{{- end}}
+		{{- if .HasModule "oauth2"}}
+		// After auth: the consent screen asks the signed-in user to approve a
+		// client, and ResourceOwner reads them off the context the auth
+		// provider populated.
+		plugins.OAuth2(),
 		{{- end}}
 		{{- if .HasModule "seo"}}
 		plugins.Seo(),

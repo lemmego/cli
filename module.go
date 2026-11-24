@@ -29,11 +29,14 @@ const (
 	ModuleMail      Module = "mail"
 	ModuleMedia     Module = "media"
 	ModuleNotify    Module = "notify"
+	ModuleOauth2    Module = "oauth2"
 	ModuleObserve   Module = "observe"
 	ModulePay       Module = "pay"
 	ModuleRatelimit Module = "ratelimit"
+	ModuleRbac      Module = "rbac"
 	ModuleSearch    Module = "search"
 	ModuleSeo       Module = "seo"
+	ModuleTenancy   Module = "tenancy"
 )
 
 // moduleSpec is what the CLI knows about one module.
@@ -119,6 +122,25 @@ var AllModules = []moduleSpec{
 		},
 	},
 	{
+		name:    ModuleOauth2,
+		summary: "An OAuth2 authorization server: this app issues the tokens",
+		requires: func(c ProjectConfig) error {
+			// Every grant, client and token is a row, and the store opens
+			// over the application's own connection.
+			if !c.HasDatabase() {
+				return fmt.Errorf("oauth2 needs a database: clients, grants and tokens are rows")
+			}
+			// The consent screen asks a signed-in person to approve a client,
+			// so there has to be somebody to ask. Without authentication
+			// every authorization request would redirect to a login route
+			// that does not exist.
+			if !c.EnableAuth {
+				return fmt.Errorf("oauth2 needs authentication: the consent screen asks the signed-in user to approve a client")
+			}
+			return nil
+		},
+	},
+	{
 		name:    ModuleObserve,
 		summary: "Request-scoped debugging: what one request did, with timings",
 	},
@@ -161,6 +183,26 @@ var AllModules = []moduleSpec{
 		},
 	},
 	{
+		name:    ModuleRbac,
+		summary: "Database-backed roles and permissions, checked through authz",
+		requires: func(c ProjectConfig) error {
+			// Not a scaffold limitation. The module's own schema is
+			// PostgreSQL: bigserial, timestamptz, now(), a CHECK using the ~
+			// regex operator and ALTER TABLE ADD CONSTRAINT. Offering it
+			// elsewhere would scaffold a project whose first migration fails.
+			if c.SQLDriver != SQLPostgres {
+				return fmt.Errorf("rbac is offered on postgres only: its schema uses bigserial, timestamptz and a regex CHECK")
+			}
+			// A permission is held by somebody, and the set is loaded for
+			// whoever is signed in. Without authentication every check would
+			// be asked about nobody.
+			if !c.EnableAuth {
+				return fmt.Errorf("rbac needs authentication: a permission set is loaded for the signed-in user")
+			}
+			return nil
+		},
+	},
+	{
 		name:    ModuleSearch,
 		summary: "Full-text search over the rows you already have",
 		requires: func(c ProjectConfig) error {
@@ -176,6 +218,27 @@ var AllModules = []moduleSpec{
 			// "install something first".
 			if c.SQLDriver != SQLPostgres {
 				return fmt.Errorf("search needs postgres: its default engine searches tsvector columns, which mysql and sqlite do not have")
+			}
+			return nil
+		},
+	},
+	{
+		name:    ModuleTenancy,
+		summary: "Multi-tenancy: which tenant a request is about, and keeping rows apart",
+		requires: func(c ProjectConfig) error {
+			// Postgres only, and not as a scaffold convenience. Isolation
+			// rests on row-level security, which no other supported database
+			// has — and the ORM predicate alone does not cover raw SQL or a
+			// many-to-many pivot read. Offering this on SQLite would
+			// scaffold a project that looks multi-tenant and leaks.
+			if c.SQLDriver != SQLPostgres {
+				return fmt.Errorf("tenancy is offered on postgres only: isolation rests on row-level security")
+			}
+			// The binding comes from the caller's membership, so there has
+			// to be a caller. Resolving a tenant from a header with nobody
+			// signed in is the leak the module exists to prevent.
+			if !c.EnableAuth {
+				return fmt.Errorf("tenancy needs authentication: a tenant binding comes from the signed-in user's membership")
 			}
 			return nil
 		},

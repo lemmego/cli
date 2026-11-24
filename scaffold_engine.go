@@ -72,8 +72,10 @@ func (td templateData) ModuleRoutes() []string {
 		ModuleNotify:    "NotifyRoutes",
 		ModulePay:       "PayRoutes",
 		ModuleRatelimit: "RatelimitRoutes",
+		ModuleRbac:      "RbacRoutes",
 		ModuleSearch:    "SearchRoutes",
 		ModuleSeo:       "SeoRoutes",
+		ModuleTenancy:   "TenancyRoutes",
 	}
 
 	var names []string
@@ -396,6 +398,18 @@ func generateDynamicFiles(td templateData, destDir string, src scaffoldSource) e
 	// one this project chose, and an overlay is copied verbatim.
 	if td.HasModule("observe") && td.HasDatabase() {
 		stubs["internal/plugins/observe_driver.go"] = "observe_driver.go.tpl"
+	}
+	// One authz provider however many sources of rules there are. A stub
+	// rather than an overlay file because typed policies and database-backed
+	// permissions register into the same registry, and which of them are
+	// present is the configuration's answer rather than one overlay's.
+	if td.HasModule("authz") || td.HasModule("rbac") {
+		stubs["internal/plugins/authz.go"] = "authz.go.tpl"
+	}
+	// The rbac tables, from the module's own statement generator so there is
+	// no second copy of the schema here.
+	if td.HasModule("rbac") {
+		stubs["internal/migrations/20261113000000_create_rbac_tables.go"] = "rbac_migration.go.tpl"
 	}
 	if td.HasModule("search") {
 		stubs["internal/configs/search.go"] = "search.go.tpl"

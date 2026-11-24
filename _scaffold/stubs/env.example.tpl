@@ -201,6 +201,34 @@ STRIPE_WEBHOOK_SECRET_PREVIOUS=
 # the events in production.
 BROADCAST_BUS=memory
 {{- end}}
+{{- if .HasModule "tenancy"}}
+
+# Multi-tenancy. Every host under this domain resolves to a tenant label, so
+# company.example.test reaches the tenant whose slug is "company". There is no
+# default: resolving every host to one surface because nobody configured a
+# domain is not something this can guess.
+#
+# A tenant can also be named with the X-Tenant-Slug header. Naming one is not
+# the same as being allowed to see it — membership is what authorises, and it
+# is a row in tenant_users.
+TENANCY_APP_DOMAIN=example.test
+{{- end}}
+{{- if .HasModule "oauth2"}}
+
+# The OAuth2 authorization server. This application issues the tokens; it is
+# not a client for signing in elsewhere.
+#
+# The issuer is the iss claim of every token and the issuer in the discovery
+# document, so it must be this application's public URL. It falls back to
+# APP_URL, which is usually what you want.
+OAUTH_ISSUER=
+# Where the endpoints are mounted. The discovery document and the JWKS stay at
+# the root whatever this says, as RFC 8414 requires.
+OAUTH_ROUTE_PREFIX=/oauth
+# The RSA keypair tokens are signed with. Generate it with
+# `lemmego run oauth:keys`; storage/ is already gitignored.
+OAUTH_KEYS_PATH=./storage/oauth
+{{- end}}
 {{- if .HasModule "observe"}}
 
 # Off unless this says otherwise, because an entry holds request headers,
