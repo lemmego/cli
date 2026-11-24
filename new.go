@@ -2,7 +2,10 @@ package cli
 
 import (
 	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
 	"encoding/base64"
+	"encoding/pem"
 	"fmt"
 	"log"
 	"os"
@@ -98,6 +101,9 @@ var newCmd = &cobra.Command{
 
 		installGoModules(dirPath)
 		generateAppKey(dirPath)
+		if cfg.HasModule("oauth2") {
+			generateOAuthKeys(dirPath)
+		}
 
 		fmt.Printf("\nSuccessfully created a new Lemmego app with module name: %s in directory: %s\n", cfg.ModuleName, dirname)
 		fmt.Println("> Navigate to your new project, and run:")
@@ -178,6 +184,95 @@ func generateAppKey(dirPath string) {
 	if err := setEnvValue(envPath, "APP_KEY", base64.StdEncoding.EncodeToString(key)); err != nil {
 		fmt.Println("Warning: could not write the app key:", err)
 		fmt.Println("Run `make appkey` once the database is configured.")
+	}
+}
+
+// generateOAuthKeys writes the RSA keypair the OAuth2 server signs tokens with.
+//
+// Without it a generated project does not boot: the oauth2 provider fails when
+// the key is absent, and a failing provider panics out of registerProviders —
+// so the first `lemmego dev` ends in a stack trace. The error names the command
+// that fixes it and that command does work, because the module warns rather
+// than failing when the application is running in console mode. But a
+// scaffolded project should run, not hand somebody a recovery step.
+//
+// Written here rather than by shelling out to `lemmego run oauth:keys`, for the
+// same reason as the app key above: `run` boots the generated application to
+// reach its command, and the application cannot boot until somebody has filled
+// in database credentials.
+//
+// The project keeps its own `oauth:keys` command, which is what a teammate
+// cloning the repository runs — storage/ is gitignored, so these keys are
+// per-checkout, exactly like APP_KEY in .env.
+//
+// The format has to match what oauth2.FileKeySource reads, which is not
+// negotiable in two places: PKCS#8 PEM for the private half, and **mode
+// 0600**. The reader refuses a key with any group or other permission bit set,
+// so a more relaxed mode here would produce a project that fails to boot with
+// a message about permissions instead of about a missing file.
+func generateOAuthKeys(dirPath string) {
+	fmt.Println("> Generating OAuth2 signing keys...")
+
+	// 2048 bits, matching the module's own OAUTH_KEY_LENGTH default.
+	//
+	// Reimplemented over the standard library rather than calling
+	// oauth2.WriteKey, because the CLI does not depend on the framework and
+	// should not start: oauth2 reaches api/app, and this is crypto/rsa,
+	// crypto/x509 and encoding/pem.
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		fmt.Println("Warning: could not generate the OAuth2 signing key:", err)
+		fmt.Println("Run `lemmego run oauth:keys` before starting the server.")
+		return
+	}
+
+	dir := filepath.Join(dirPath, "storage", "oauth")
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		fmt.Println("Warning: could not create", dir+":", err)
+		fmt.Println("Run `lemmego run oauth:keys` before starting the server.")
+		return
+	}
+
+	private, err := x509.MarshalPKCS8PrivateKey(key)
+	if err != nil {
+		fmt.Println("Warning: could not encode the OAuth2 signing key:", err)
+		return
+	}
+	privatePEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: private})
+
+	// O_EXCL: a key that is already there belongs to somebody's running
+	// deployment, and replacing it would invalidate every token ever issued.
+	// Scaffolding into a directory that has one is unexpected enough to stop
+	// for rather than to resolve.
+	file, err := os.OpenFile(filepath.Join(dir, "private.key"),
+		os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		if os.IsExist(err) {
+			fmt.Println("Warning: storage/oauth/private.key already exists; leaving it alone.")
+			return
+		}
+		fmt.Println("Warning: could not write the OAuth2 signing key:", err)
+		fmt.Println("Run `lemmego run oauth:keys` before starting the server.")
+		return
+	}
+	if _, err := file.Write(privatePEM); err != nil {
+		file.Close()
+		fmt.Println("Warning: could not write the OAuth2 signing key:", err)
+		return
+	}
+	if err := file.Close(); err != nil {
+		fmt.Println("Warning: could not write the OAuth2 signing key:", err)
+		return
+	}
+
+	public, err := x509.MarshalPKIXPublicKey(&key.PublicKey)
+	if err != nil {
+		fmt.Println("Warning: could not encode the OAuth2 public key:", err)
+		return
+	}
+	publicPEM := pem.EncodeToMemory(&pem.Block{Type: "PUBLIC KEY", Bytes: public})
+	if err := os.WriteFile(filepath.Join(dir, "public.key"), publicPEM, 0o644); err != nil {
+		fmt.Println("Warning: could not write the OAuth2 public key:", err)
 	}
 }
 
