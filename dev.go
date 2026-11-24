@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -94,6 +96,20 @@ var devCmd = &cobra.Command{
 					"after startup is slow while it transforms the module graph.")
 				fmt.Println("  Run `" + npmBinary() + " run build:ssr` once to render through the standalone server instead.")
 			}
+		}
+
+		// The libSQL server before air, for the reason vite comes before air:
+		// the Go process cannot boot without its database. The queue migrates
+		// at startup, so a missing server is not a degraded start, it is a
+		// panic -- and the client reports it as `failed to execute SQL:` with
+		// an empty message, which says nothing about a server not being there.
+		if addr, dbPath, note := libsqlDevTarget(); addr != "" {
+			processes = append(processes, startDevProcess("libsql", ".", "sqld",
+				"--db-path", dbPath, "--http-listen-addr", addr))
+			waitForListener(addr, 15*time.Second)
+			fmt.Printf("libSQL on http://%s, data in %s\n", addr, dbPath)
+		} else if note != "" {
+			fmt.Println(note)
 		}
 
 		// Always: air for Go hot reload
@@ -275,4 +291,115 @@ func waitForViteHotFile() {
 		time.Sleep(100 * time.Millisecond)
 	}
 	fmt.Println(" not yet; starting the server anyway")
+}
+
+// libsqlDevTarget decides whether `dev` should start a libSQL server, and
+// where it should keep its data.
+//
+// The data directory is a property of the server, not of the application: a
+// project configured for libSQL knows only DB_URL. So this is the one place
+// that decides where a local database lives, and `lemmego dev` is the right
+// place for it -- the alternative is every developer remembering to start a
+// server by hand, which is what made a generated libsql project fail to boot
+// with no hint as to why.
+//
+// Four conditions, each one a case that would otherwise be wrong:
+//
+//   - DB_DRIVER must be libsql. Nothing else wants a libSQL server.
+//   - the URL must be loopback. A project pointed at a hosted libSQL already
+//     has a database; starting a local one would at best be ignored and at
+//     worst answer on a port the application prefers.
+//   - nothing may be listening already. Somebody running sqld themselves, by
+//     hand or in Docker, must not get a second one fighting for the port.
+//   - sqld must be installed, and missing is a note rather than a fatal:
+//     `dev` starting nothing is better than `dev` refusing to run, and the
+//     note says what to do.
+func libsqlDevTarget() (addr, dbPath, note string) {
+	if envValue("DB_DRIVER") != "libsql" {
+		return "", "", ""
+	}
+	raw := envValue("DB_URL")
+	if raw == "" {
+		return "", "", "note: DB_DRIVER is libsql but DB_URL is unset, so no database server was started."
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Hostname() == "" {
+		return "", "", fmt.Sprintf("note: DB_URL (%s) is not a URL, so no database server was started.", raw)
+	}
+	if !isLoopbackHost(parsed.Hostname()) {
+		// A hosted database. Nothing to start, and nothing worth saying.
+		return "", "", ""
+	}
+	host := parsed.Host
+	if parsed.Port() == "" {
+		host = net.JoinHostPort(parsed.Hostname(), "8080")
+	}
+	if listening(host) {
+		return "", "", fmt.Sprintf("libSQL is already listening on http://%s, so `dev` left it alone.", host)
+	}
+	if !HasBinary("sqld") {
+		return "", "", "note: DB_DRIVER is libsql and nothing is listening on " + host + ", " +
+			"so the application will not boot.\n      Install sqld (brew install libsql) or start one yourself."
+	}
+	root, err := os.Getwd()
+	if err != nil {
+		return "", "", ""
+	}
+	// Absolute on purpose: --db-path is relative to sqld's working directory,
+	// so a relative one silently creates a second, empty database whenever
+	// sqld is started from anywhere else, and every table then looks as though
+	// it was never migrated.
+	return host, filepath.Join(root, "storage", "data", "libsql"), ""
+}
+
+// envValue reads one key out of the project's .env.
+//
+// `dev` needs two values before the application has read anything, and it is
+// not the application: loading a whole configuration system to find a port
+// would mean `dev` failing for the same reasons the application fails, which
+// is the opposite of useful.
+func envValue(key string) string {
+	raw, err := os.ReadFile(".env")
+	if err != nil {
+		return ""
+	}
+	for _, line := range strings.Split(string(raw), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		name, value, found := strings.Cut(line, "=")
+		if !found || strings.TrimSpace(name) != key {
+			continue
+		}
+		return strings.Trim(strings.TrimSpace(value), `"'`)
+	}
+	return ""
+}
+
+func isLoopbackHost(host string) bool {
+	if host == "localhost" {
+		return true
+	}
+	ip := net.ParseIP(strings.Trim(host, "[]"))
+	return ip != nil && ip.IsLoopback()
+}
+
+func listening(addr string) bool {
+	conn, err := net.DialTimeout("tcp", addr, 300*time.Millisecond)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+func waitForListener(addr string, limit time.Duration) {
+	deadline := time.Now().Add(limit)
+	for time.Now().Before(deadline) {
+		if listening(addr) {
+			return
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 }

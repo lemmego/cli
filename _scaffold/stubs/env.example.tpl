@@ -26,6 +26,24 @@ DB_DRIVER={{.SQLDriver.DriverName}}
 DB_DATABASE=./storage/database.sqlite
 {{- else if eq .SQLDriver "libsql"}}
 # A libSQL server is addressed by URL, so there is no DB_HOST or DB_PORT.
+# Something has to be serving it: unlike sqlite, which the application creates
+# as a file, libSQL is a server and the application is only a client. Nothing
+# starts it for you except `make dev`, which starts one on this address when
+# the host is loopback and nothing is listening yet.
+#
+# To run it yourself:
+#
+#     make libsql
+#     # or: sqld --db-path $PWD/storage/data/libsql --http-listen-addr 127.0.0.1:8080
+#
+# The data directory is the server's, not the application's -- the application
+# never sees a path. Use an absolute one: --db-path is relative to sqld's
+# working directory, so a relative path silently creates a second, empty
+# database when sqld is started from somewhere else, and every table then looks
+# as though it was never migrated.
+#
+# Point DB_URL at a hosted libSQL instead and `make dev` starts nothing, which
+# is the intended behaviour rather than an oversight.
 DB_URL=http://127.0.0.1:8080
 
 # And DATABASE_URL, because the two paths disagree about what a DSN is.
