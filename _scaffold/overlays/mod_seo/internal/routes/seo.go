@@ -45,7 +45,7 @@ func seoPreview(c app.Context) error {
 		// Written out here because this example renders the Meta directly.
 		// Through Share it may be a bare path: the site defaults prepend
 		// BaseURL, which is the usual way to write it.
-		Canonical: config.MustEnv("APP_URL", "http://localhost:8080") + c.Request().URL.Path,
+		Canonical: config.MustEnv("APP_URL", "http://localhost:1490") + c.Request().URL.Path,
 
 		Type: "article",
 

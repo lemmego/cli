@@ -5,7 +5,7 @@ import "github.com/lemmego/api/config"
 func init() {
 	config.Set("app", config.M{
 		"name":            config.MustEnv("APP_NAME", "Lemmego"),
-		"port":            config.MustEnv("APP_PORT", 8080),
+		"port":            config.MustEnv("APP_PORT", 1490),
 		"env":             config.MustEnv("APP_ENV", "development"),
 		"debug":           config.MustEnv("APP_DEBUG", false),
 		"config_path":     config.MustEnv("CONFIG_PATH", "./internal/configs"),

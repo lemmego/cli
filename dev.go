@@ -103,7 +103,7 @@ var devCmd = &cobra.Command{
 		// If templ files exist: templ generate --watch
 		if hasTemplFiles() {
 			EnsureBinary("templ")
-			processes = append(processes, startDevProcess("templ", ".", "templ", "generate", "--watch", "--proxy", "http://localhost:8080"))
+			processes = append(processes, startDevProcess("templ", ".", "templ", "generate", "--watch", "--proxy", "http://localhost:1490"))
 		}
 
 		fmt.Println()

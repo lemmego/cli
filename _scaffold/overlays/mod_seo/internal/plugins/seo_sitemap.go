@@ -24,7 +24,7 @@ type staticSource struct {
 }
 
 func staticPages() seo.Source {
-	base := config.MustEnv("APP_URL", "http://localhost:8080")
+	base := config.MustEnv("APP_URL", "http://localhost:1490")
 
 	return staticSource{
 		base: base,

@@ -46,7 +46,7 @@ func startCheckout(c app.Context) error {
 		return c.SetStatus(422).JSON(app.M{"error": "send price_id, email and reference"})
 	}
 
-	base := config.MustEnv("APP_URL", "http://localhost:8080")
+	base := config.MustEnv("APP_URL", "http://localhost:1490")
 
 	checkout, err := billingSvc.Checkout(c.RequestContext(), pay.CheckoutRequest{
 		PriceID: body.PriceID,

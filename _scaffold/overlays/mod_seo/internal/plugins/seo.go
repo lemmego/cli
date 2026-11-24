@@ -23,7 +23,7 @@ var deployedAt = time.Now().UTC()
 func Seo() app.Provider {
 	return &seo.Provider{
 		Defaults: seo.Defaults{
-			BaseURL:  config.MustEnv("APP_URL", "http://localhost:8080"),
+			BaseURL:  config.MustEnv("APP_URL", "http://localhost:1490"),
 			SiteName: config.MustEnv("APP_NAME", "Lemmego"),
 			NoIndex:  config.MustEnv("APP_ENV", "development") != "production",
 

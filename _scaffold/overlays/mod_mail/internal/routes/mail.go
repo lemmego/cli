@@ -45,7 +45,7 @@ func sendWelcome(c app.Context) error {
 		// application's own base URL. A Mailable that read it from the
 		// environment itself could not be asserted on in a test without
 		// setting one.
-		URL: config.MustEnv("APP_URL", "http://localhost:8080"),
+		URL: config.MustEnv("APP_URL", "http://localhost:1490"),
 	}
 
 	if err := mail.Send(c.RequestContext(), msg); err != nil {

@@ -1,8 +1,8 @@
 APP_NAME=Lemmego
-APP_URL=http://localhost:8080
+APP_URL=http://localhost:1490
 APP_ENV=development
 APP_DEBUG=true
-APP_PORT=8080
+APP_PORT=1490
 
 # Filled in by `make appkey`, which signs sessions and cookies. Empty is not a
 # working value — MustEnv treats a present-but-empty variable as a decision, so
@@ -169,7 +169,7 @@ SEARCH_MEILISEARCH_KEY=
 #
 # Two webhook secrets, so one can be rotated without an interval in which
 # events are refused — and a refused event is money moving with nothing
-# recording it. `stripe listen --forward-to localhost:8080/pay/webhook`
+# recording it. `stripe listen --forward-to localhost:1490/pay/webhook`
 # prints one for development.
 STRIPE_SECRET_KEY=
 STRIPE_WEBHOOK_SECRET=

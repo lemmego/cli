@@ -24,7 +24,7 @@ import (
 // actually served from.
 func Broadcast() app.Provider {
 	p := &broadcastprovider.Provider{
-		AllowedOrigins: []string{config.MustEnv("APP_URL", "http://localhost:8080")},
+		AllowedOrigins: []string{config.MustEnv("APP_URL", "http://localhost:1490")},
 		BusFor:         broadcastBus(),
 
 		Config: broadcast.Config{
