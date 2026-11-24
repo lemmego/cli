@@ -1,10 +1,13 @@
 package cli
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -103,13 +106,22 @@ var devCmd = &cobra.Command{
 		// at startup, so a missing server is not a degraded start, it is a
 		// panic -- and the client reports it as `failed to execute SQL:` with
 		// an empty message, which says nothing about a server not being there.
-		if addr, dbPath, note := libsqlDevTarget(); addr != "" {
+		addr, dbPath, note, fatal := libsqlDevTarget()
+		if note != "" {
+			fmt.Println(note)
+		}
+		// A database that is known to be unusable stops `dev` here. Starting
+		// air anyway produces a panic and a stack trace that scroll the
+		// explanation off the screen, which is how this was reported in the
+		// first place.
+		if fatal {
+			return
+		}
+		if addr != "" {
 			processes = append(processes, startDevProcess("libsql", ".", "sqld",
 				"--db-path", dbPath, "--http-listen-addr", addr))
 			waitForListener(addr, 15*time.Second)
 			fmt.Printf("libSQL on http://%s, data in %s\n", addr, dbPath)
-		} else if note != "" {
-			fmt.Println(note)
 		}
 
 		// Always: air for Go hot reload
@@ -314,42 +326,50 @@ func waitForViteHotFile() {
 //   - sqld must be installed, and missing is a note rather than a fatal:
 //     `dev` starting nothing is better than `dev` refusing to run, and the
 //     note says what to do.
-func libsqlDevTarget() (addr, dbPath, note string) {
+func libsqlDevTarget() (addr, dbPath, note string, fatal bool) {
 	if envValue("DB_DRIVER") != "libsql" {
-		return "", "", ""
+		return "", "", "", false
 	}
 	raw := envValue("DB_URL")
 	if raw == "" {
-		return "", "", "note: DB_DRIVER is libsql but DB_URL is unset, so no database server was started."
+		return "", "", "note: DB_DRIVER is libsql but DB_URL is unset, so no database server was started.", false
 	}
 	parsed, err := url.Parse(raw)
 	if err != nil || parsed.Hostname() == "" {
-		return "", "", fmt.Sprintf("note: DB_URL (%s) is not a URL, so no database server was started.", raw)
+		return "", "", fmt.Sprintf("note: DB_URL (%s) is not a URL, so no database server was started.", raw), false
 	}
 	if !isLoopbackHost(parsed.Hostname()) {
 		// A hosted database. Nothing to start, and nothing worth saying.
-		return "", "", ""
+		return "", "", "", false
 	}
 	host := parsed.Host
 	if parsed.Port() == "" {
 		host = net.JoinHostPort(parsed.Hostname(), "8080")
 	}
 	if listening(host) {
-		return "", "", fmt.Sprintf("libSQL is already listening on http://%s, so `dev` left it alone.", host)
+		if why := notServing(host); why != "" {
+			return "", "", fmt.Sprintf(
+				"error: something is listening on %s but cannot serve a query: %s\n"+
+					"       That is usually a server left over from a previous project, or one\n"+
+					"       whose data directory was removed under it -- it keeps its HTTP\n"+
+					"       listener and fails every statement, so the application would panic\n"+
+					"       against it. Stop it and run `lemmego dev` again.", host, why), true
+		}
+		return "", "", fmt.Sprintf("libSQL is already listening on http://%s, so `dev` left it alone.", host), false
 	}
 	if !HasBinary("sqld") {
 		return "", "", "note: DB_DRIVER is libsql and nothing is listening on " + host + ", " +
-			"so the application will not boot.\n      Install sqld (brew install libsql) or start one yourself."
+			"so the application will not boot.\n      Install sqld (brew install libsql) or start one yourself.", false
 	}
 	root, err := os.Getwd()
 	if err != nil {
-		return "", "", ""
+		return "", "", "", false
 	}
 	// Absolute on purpose: --db-path is relative to sqld's working directory,
 	// so a relative one silently creates a second, empty database whenever
 	// sqld is started from anywhere else, and every table then looks as though
 	// it was never migrated.
-	return host, filepath.Join(root, "storage", "data", "libsql"), ""
+	return host, filepath.Join(root, "storage", "data", "libsql"), "", false
 }
 
 // envValue reads one key out of the project's .env.
@@ -402,4 +422,80 @@ func waitForListener(addr string, limit time.Duration) {
 		}
 		time.Sleep(200 * time.Millisecond)
 	}
+}
+
+// notServing returns why a libSQL server cannot answer a query, or "" when it
+// can. Something being bound to the port is not the same thing, and the
+// difference is a real failure rather than a hypothetical one.
+//
+// A sqld whose --db-path has been deleted under it -- a project regenerated
+// while a server from the previous one was still running -- keeps its HTTP
+// listener up and fails every statement with
+// `error code 500: unable to open database file`. A TCP dial cannot tell that
+// apart from a healthy server, so `dev` left the dead one alone and the
+// application panicked against it, reporting a message that names no server
+// and reads like a framework bug.
+func notServing(addr string) string {
+	body := `{"requests":[{"type":"execute","stmt":{"sql":"SELECT 1"}},{"type":"close"}]}`
+	client := &http.Client{Timeout: 3 * time.Second}
+	resp, err := client.Post("http://"+addr+"/v2/pipeline",
+		"application/json", bytes.NewReader([]byte(body)))
+	if err != nil {
+		return err.Error()
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<16))
+	if err != nil {
+		return err.Error()
+	}
+	if resp.StatusCode != http.StatusOK {
+		// The status code alone is the least useful thing available. sqld puts
+		// the reason in the body -- "unable to open database file: <path>" is
+		// the one that matters, because it names the directory that went away.
+		if detail := firstLine(string(raw)); detail != "" {
+			return fmt.Sprintf("HTTP %d: %s", resp.StatusCode, detail)
+		}
+		return fmt.Sprintf("HTTP %d", resp.StatusCode)
+	}
+
+	// The Hrana pipeline answers 200 with a per-request error inside, so the
+	// status code alone says nothing.
+	var answer struct {
+		Results []struct {
+			Type  string `json:"type"`
+			Error struct {
+				Message string `json:"message"`
+			} `json:"error"`
+		} `json:"results"`
+	}
+	if err := json.Unmarshal(raw, &answer); err != nil {
+		// Not a libSQL server at all. Something else owns this port.
+		return "the response is not a libSQL pipeline reply"
+	}
+	if len(answer.Results) == 0 {
+		return "the server answered with no result"
+	}
+	if first := answer.Results[0]; first.Type == "error" {
+		message := strings.TrimSpace(first.Error.Message)
+		if message == "" {
+			message = "an error with no message"
+		}
+		return firstLine(message)
+	}
+	return ""
+}
+
+// firstLine is the readable part of a server's complaint: the rest is a path
+// repeated, or a stack of wrapped errors that does not help somebody reading
+// one line in a terminal.
+func firstLine(text string) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+	line := strings.TrimSpace(strings.SplitN(text, "\n", 2)[0])
+	if len(line) > 200 {
+		line = line[:200] + "..."
+	}
+	return line
 }
