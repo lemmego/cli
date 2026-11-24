@@ -10,6 +10,8 @@ import (
 	"github.com/go-sql-driver/mysql"
 {{- else if eq .SQLDriver "postgres"}}
 	"github.com/lib/pq"
+{{- else if eq .SQLDriver "libsql"}}
+	"github.com/tursodatabase/libsql-client-go/libsql"
 {{- end}}
 )
 
@@ -38,6 +40,8 @@ func init() {
 		&mysql.MySQLDriver{},
 {{- else if eq .SQLDriver "postgres"}}
 		&pq.Driver{},
+{{- else if eq .SQLDriver "libsql"}}
+		libsql.Driver{},
 {{- end}}
 	))
 }

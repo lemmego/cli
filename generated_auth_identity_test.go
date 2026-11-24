@@ -88,7 +88,25 @@ func moduleCombinations() []ProjectConfig {
 		}
 	}
 
-	return []ProjectConfig{postgres, sqlite}
+	// libSQL carrying modules, which is the intersection this matrix
+	// otherwise misses. The two configs above are the only ones that select
+	// modules and they are postgres and sqlite; the only libSQL configs are
+	// in sessionCombinations, which select none. So no combination ever
+	// generated a per-module stub for libSQL, and observe_driver.go shipped
+	// with no libSQL branch — emitting observe.Wrap() with no argument and no
+	// import, which does not compile.
+	libsql := postgres
+	libsql.Name = "modslibsql"
+	libsql.ModuleName = "example.com/contracts/modslibsql"
+	libsql.SQLDriver = SQLLibSQL
+	libsql.Modules = nil
+	for _, spec := range AllModules {
+		if spec.requires == nil || spec.requires(libsql) == nil {
+			libsql.Modules = append(libsql.Modules, spec.name)
+		}
+	}
+
+	return []ProjectConfig{postgres, sqlite, libsql}
 }
 
 // The database session driver, once per dialect.
