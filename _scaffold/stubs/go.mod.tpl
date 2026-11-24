@@ -22,6 +22,8 @@ require (
 	github.com/go-sql-driver/mysql {{.Version "github.com/go-sql-driver/mysql"}}
 	{{- else if eq (printf "%s" .SQLDriver) "postgres"}}
 	github.com/lib/pq {{.Version "github.com/lib/pq"}}
+	{{- else if eq (printf "%s" .SQLDriver) "libsql"}}
+	github.com/tursodatabase/libsql-client-go {{.Version "github.com/tursodatabase/libsql-client-go"}}
 	{{- end}}
 	{{- if eq .FilesystemDisk "s3"}}
 	github.com/lemmego/fsys {{.Version "github.com/lemmego/fsys"}}

@@ -56,7 +56,7 @@ func collectNonInteractiveProjectConfig(dirname string) (*ProjectConfig, error) 
 		return nil, err
 	}
 	if cfg.SQLDriver, err = parseChoice("database", projectFlags.Database, d.SQLDriver,
-		SQLSQLite, SQLMySQL, SQLPostgres, SQLNone); err != nil {
+		SQLSQLite, SQLMySQL, SQLPostgres, SQLLibSQL, SQLNone); err != nil {
 		return nil, err
 	}
 	if cfg.ORM, err = parseChoice("orm", projectFlags.ORM, d.ORM,
@@ -179,6 +179,7 @@ func collectProjectConfig(dirname string, enableExperimental bool) *ProjectConfi
 					huh.NewOption("SQLite — a file under ./storage, nothing to install", SQLSQLite),
 					huh.NewOption("PostgreSQL", SQLPostgres),
 					huh.NewOption("MySQL / MariaDB", SQLMySQL),
+					huh.NewOption("libSQL — a SQLite server over HTTP, reached by URL", SQLLibSQL),
 					huh.NewOption("None", SQLNone),
 				).
 				Value(&cfg.SQLDriver),

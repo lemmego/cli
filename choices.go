@@ -22,6 +22,19 @@ const (
 	SQLSQLite   SQLDriver = "sqlite"
 	SQLMySQL    SQLDriver = "mysql"
 	SQLPostgres SQLDriver = "postgres"
+
+	// SQLLibSQL is a libSQL server, reached over HTTP.
+	//
+	// It is SQLite's SQL and SQLite's DDL -- libSQL is a fork -- so migration
+	// targets it as sqlite and orm uses a dialect that differs from SQLite in
+	// exactly one way: its driver refuses a read-only transaction, which
+	// orm.LibSQL() declares so the option is dropped rather than the request
+	// failing.
+	//
+	// Unlike every other choice here, its address is a URL rather than a host
+	// and a port, which is why the connection block carries a "url" key and
+	// the environment carries DATABASE_URL for the migrator.
+	SQLLibSQL SQLDriver = "libsql"
 )
 
 func (d SQLDriver) Enabled() bool { return d != "" && d != SQLNone }
@@ -49,9 +62,16 @@ func (d SQLDriver) DefaultPort() int {
 		return 3306
 	case SQLPostgres:
 		return 5432
+	case SQLLibSQL:
+		return 8080
 	}
 	return 0
 }
+
+// NeedsURL reports whether this driver is addressed by a URL rather than by a
+// host and a port. Templates branch on it so a libSQL block does not sprout
+// DB_HOST and DB_PORT it cannot use.
+func (d SQLDriver) NeedsURL() bool { return d == SQLLibSQL }
 
 // CacheDriver is where cached values are kept.
 type CacheDriver string

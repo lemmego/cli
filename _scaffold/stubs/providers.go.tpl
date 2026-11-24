@@ -21,6 +21,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 	{{- else if eq (printf "%s" .SQLDriver) "postgres"}}
 	_ "github.com/lib/pq"
+	{{- else if eq (printf "%s" .SQLDriver) "libsql"}}
+	_ "github.com/tursodatabase/libsql-client-go/libsql"
 	{{- end}}
 {{- end}}
 	{{- if eq .FilesystemDisk "s3"}}

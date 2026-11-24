@@ -99,8 +99,12 @@ func moduleCombinations() []ProjectConfig {
 // provider ordering this driver depends on is also preset-independent, and
 // nothing else in the matrix selects it.
 func sessionCombinations() []ProjectConfig {
-	configs := make([]ProjectConfig, 0, 3)
-	for _, driver := range []SQLDriver{SQLSQLite, SQLMySQL, SQLPostgres} {
+	configs := make([]ProjectConfig, 0, 4)
+	// libsql included: its sessions migration takes the sqlite branch, which is
+	// correct because libSQL is a fork of SQLite, and nothing else in the
+	// matrix would compile a project whose connection block carries a "url"
+	// key instead of a host and a port.
+	for _, driver := range []SQLDriver{SQLSQLite, SQLMySQL, SQLPostgres, SQLLibSQL} {
 		configs = append(configs, ProjectConfig{
 			Name:          "sessiondb" + string(driver),
 			ModuleName:    "example.com/contracts/sessiondb" + string(driver),

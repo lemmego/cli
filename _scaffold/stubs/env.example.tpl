@@ -24,6 +24,18 @@ DB_CONNECTION={{.SQLDriver.ConnectionName}}
 DB_DRIVER={{.SQLDriver.DriverName}}
 {{- if eq .SQLDriver "sqlite"}}
 DB_DATABASE=./storage/database.sqlite
+{{- else if eq .SQLDriver "libsql"}}
+# A libSQL server is addressed by URL, so there is no DB_HOST or DB_PORT.
+DB_URL=http://127.0.0.1:8080
+
+# And DATABASE_URL, because the two paths disagree about what a DSN is.
+# `lemmego run migrate` builds its own from DB_HOST and friends, and
+# migration.DataSource cannot express a URL at all -- it emits a sqlite file
+# path, a MySQL user:pass@tcp(...) or Postgres keywords, and deliberately
+# refuses libsql so it cannot quietly open a local FILE instead of the server.
+# The migrator reads DATABASE_URL before it tries to build anything, so that
+# is how it finds a libSQL server. Keep this in step with DB_URL above.
+DATABASE_URL=http://127.0.0.1:8080
 {{- else}}
 DB_HOST=localhost
 DB_PORT={{.SQLDriver.DefaultPort}}

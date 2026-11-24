@@ -1,7 +1,7 @@
 package configs
 
 import (
-	{{- if ne .SQLDriver "sqlite"}}
+	{{- if or (eq .SQLDriver "mysql") (eq .SQLDriver "postgres")}}
 	"time"
 
 	{{end}}
@@ -24,6 +24,19 @@ func init() {
 				"database":                config.MustEnv("DB_DATABASE", "./storage/database.sqlite"),
 				"prefix":                  "",
 				"foreign_key_constraints": config.MustEnv("DB_FOREIGN_KEYS", true),
+			},
+			{{- end}}
+			{{- if eq .SQLDriver "libsql"}}
+			"libsql": config.M{
+				"driver": "libsql",
+
+				// A URL, not a host and a port. A libSQL server is addressed
+				// as http://host:8080, which migration.DataSource cannot
+				// build -- it emits a sqlite file path, a MySQL
+				// user:pass@tcp(...) or Postgres keywords and nothing else.
+				// ormconnector reads this key and passes it straight to
+				// sql.Open, so the whole DSN lives here.
+				"url": config.MustEnv("DB_URL", "http://127.0.0.1:8080"),
 			},
 			{{- end}}
 			{{- if eq .SQLDriver "mysql"}}

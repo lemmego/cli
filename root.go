@@ -39,7 +39,7 @@ func registerCommands() {
 	newCmd.Flags().StringVar(&projectFlags.Module, "module", "", "Go module path for the new project")
 	newCmd.Flags().StringVar(&projectFlags.Preset, "preset", "", "Project preset: mvc or rest_api")
 	newCmd.Flags().StringVar(&projectFlags.Frontend, "frontend", "", "MVC frontend preset")
-	newCmd.Flags().StringVar(&projectFlags.Database, "database", "", "Database: sqlite, mysql, postgres or none")
+	newCmd.Flags().StringVar(&projectFlags.Database, "database", "", "Database: sqlite, mysql, postgres, libsql or none")
 	newCmd.Flags().StringVar(&projectFlags.ORM, "orm", "", "SQL layer: orm (Lemmego), gorm, bun or none")
 	newCmd.Flags().StringVar(&projectFlags.Cache, "cache", "", "Cache: file, memory, redis or none")
 	newCmd.Flags().StringVar(&projectFlags.Queue, "queue", "", "Queue: sql, redis or none")
