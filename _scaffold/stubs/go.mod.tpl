@@ -36,6 +36,7 @@ require (
 	{{- end}}
 	{{- if .HasQueue}}
 	github.com/lemmego/queue {{.Version "github.com/lemmego/queue"}}
+	github.com/lemmego/tasker {{.Version "github.com/lemmego/tasker"}}
 	{{- end}}
 	{{- if .EnableAuth}}
 	github.com/lemmego/auth {{.Version "github.com/lemmego/auth"}}

@@ -91,10 +91,25 @@ func TestEveryScaffoldedLemmegoImportIsPinned(t *testing.T) {
 func TestPinsWithoutAnImportAreReported(t *testing.T) {
 	pins := scaffoldPins(t)
 
+	// versions.json is excluded, and that exclusion is the whole test.
+	//
+	// It lists every pinned module by path, so a walk that includes it makes
+	// strings.Contains true for every pin no matter what -- the check was a
+	// tautology and reported nothing, ever. Combined with a t.Logf that only
+	// `-v` would have shown, it looked like a guard and was not one.
+	//
+	// What it failed to catch: tasker was pinned, no template emitted it and
+	// nothing imported it, so the pin was decorative. The version reached a
+	// generated project through queue's own go.mod instead, which is how a
+	// libsql project kept booting into a tasker that predated its fix while
+	// the pin table claimed otherwise.
 	var text strings.Builder
 	err := filepath.WalkDir("_scaffold", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return err
+		}
+		if filepath.Base(path) == "versions.json" {
+			return nil
 		}
 		raw, err := os.ReadFile(path)
 		if err != nil {
@@ -112,7 +127,8 @@ func TestPinsWithoutAnImportAreReported(t *testing.T) {
 			continue
 		}
 		if !strings.Contains(text.String(), module) {
-			t.Logf("note: %s is pinned but appears nowhere in the scaffold", module)
+			t.Errorf("%s is pinned but appears nowhere in the scaffold, so the "+
+				"pin does nothing: no template emits it and nothing imports it", module)
 		}
 	}
 }
