@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -30,37 +31,53 @@ type devProcess struct {
 // @lemmego/vite ssrOutputDirectory used by the scaffold.
 const ssrBundlePath = "bootstrap/ssr/ssr.js"
 
-// standaloneRendererURL is where that bundle listens: @inertiajs/react's own
-// server defaults to 13714 and the generated bundle does not change it.
-const standaloneRendererURL = "http://127.0.0.1:13714"
+const defaultStandaloneRendererPort = 13714
+
+func standaloneRendererPort() (int, error) {
+	value := strings.TrimSpace(os.Getenv("INERTIA_SSR_PORT"))
+	if value == "" {
+		return defaultStandaloneRendererPort, nil
+	}
+	port, err := strconv.Atoi(value)
+	if err != nil || port < 1 || port > 65535 {
+		return 0, fmt.Errorf("INERTIA_SSR_PORT must be a port from 1 to 65535, got %q", value)
+	}
+	return port, nil
+}
+
+func devSSRDisabled() bool {
+	raw := strings.TrimSpace(os.Getenv("INERTIA_SSR"))
+	enabled, err := strconv.ParseBool(raw)
+	return err == nil && !enabled
+}
 
 var devCmd = &cobra.Command{
 	Use:   "dev",
 	Short: "Start the development server with hot reload",
-	Run: func(cmd *cobra.Command, args []string) {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ssrPort, err := standaloneRendererPort()
+		if err != nil {
+			return err
+		}
 		if !isLemmegoProject() {
 			fmt.Println("Error: This does not appear to be a Lemmego project directory.")
-			return
+			return nil
 		}
 		syncFrontendIfProject()
 
 		var processes []devProcess
 
-		// Vite first, and then wait for it, because an Inertia project's
-		// server-side renderer is the Vite dev server: @inertiajs/vite serves
-		// /__inertia_ssr, and the address is published by writing
-		// ./public/hot. Starting air first meant the Go process booted with no
-		// hot file, so the first page loads rendered against a standalone
-		// renderer that `dev` deliberately never starts — and strict SSR,
-		// which is on outside production, turns that into a 500 rather than a
-		// quiet degrade.
+		// Vite first, and then wait for it, so ./public/hot is ready before
+		// air starts the Go app. Without it, the app may resolve a stale or
+		// missing renderer URL, and strict SSR turns the first render into a
+		// 500 rather than quietly falling back.
 		//
 		// lemmego/inertia re-resolves the address per render now, so this is
 		// no longer the difference between working and not. It is the
 		// difference between a clean start and a few seconds of errors on the
 		// first page somebody opens, which is the first thing they see.
-		// The standalone renderer, when there is a built bundle to serve,
-		// because that is what keeps server rendering out of the reload loop.
+		// The standalone renderer is started first when a built bundle exists,
+		// because that keeps server rendering out of Vite's reload loop.
 		//
 		// Rendering through the Vite dev server means Vite transforms the SSR
 		// module graph on demand: measured on a real application, the first
@@ -75,7 +92,12 @@ var devCmd = &cobra.Command{
 		// reaches the browser over HMR and the server-rendered document only
 		// after a rebuild.
 		var appEnv []string
-		if fileExists(ssrBundlePath) {
+		ssrDisabled := devSSRDisabled()
+		if ssrDisabled {
+			appEnv = append(appEnv, "INERTIA_SSR="+strings.TrimSpace(os.Getenv("INERTIA_SSR")))
+		}
+		if fileExists(ssrBundlePath) && !ssrDisabled {
+			standaloneRendererURL := fmt.Sprintf("http://127.0.0.1:%d", ssrPort)
 			processes = append(processes, startDevProcess("ssr", ".", "node", ssrBundlePath))
 			appEnv = append(appEnv, "INERTIA_SSR_URL="+standaloneRendererURL)
 			fmt.Printf("Server rendering through %s (%s).\n", standaloneRendererURL, ssrBundlePath)
@@ -94,7 +116,7 @@ var devCmd = &cobra.Command{
 		if fileExists("package.json") {
 			processes = append(processes, startDevProcessWithEnv("vite", ".", appEnv, npmBinary(), "run", "dev"))
 			waitForViteHotFile()
-			if len(appEnv) == 0 && fileExists("resources/js/ssr.tsx") {
+			if len(appEnv) == 0 && !ssrDisabled && fileExists("resources/js/ssr.tsx") {
 				fmt.Println("Server rendering through the Vite dev server, so the first render " +
 					"after startup is slow while it transforms the module graph.")
 				fmt.Println("  Run `" + npmBinary() + " run build:ssr` once to render through the standalone server instead.")
@@ -115,7 +137,7 @@ var devCmd = &cobra.Command{
 		// explanation off the screen, which is how this was reported in the
 		// first place.
 		if fatal {
-			return
+			return nil
 		}
 		if addr != "" {
 			processes = append(processes, startDevProcess("libsql", ".", "sqld",
@@ -139,6 +161,7 @@ var devCmd = &cobra.Command{
 		fmt.Println()
 
 		waitForShutdown(processes)
+		return nil
 	},
 }
 

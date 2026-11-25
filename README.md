@@ -169,22 +169,25 @@ Starts Vite (if there is a `package.json`), then air, then `templ generate
 and coloured. Ctrl+C stops all of them.
 
 **Vite goes first, and is waited for.** An Inertia project's server-side
-renderer *is* the Vite dev server: `@inertiajs/vite` serves `/__inertia_ssr`,
-and the address is published by writing `./public/hot`. If the Go process
-booted first it would find no hot file and render against a standalone
-renderer that `dev` never starts — and strict SSR, which is on outside
-production, makes that a 500 rather than a quiet degrade. A stale hot file
-from a previous run is removed before the wait, because it would be believed
-instantly and point at a dev server that is gone.
+renderer is either the standalone SSR bundle or the Vite dev server. If the Go
+process booted before Vite it would find no hot file and strict SSR, which is
+on outside production, could turn the first render into a 500. A stale hot
+file from a previous run is removed before the wait, because it would be
+believed instantly and point at a dev server that is gone.
 
 The wait is bounded at 20 seconds and is not fatal: a project may have a
 `package.json` and no Vite, and the right answer then is to start the Go
 server and let its own errors say so.
 
-`lemmego dev` does **not** start the standalone Inertia SSR server. In
-development the Vite dev server is the renderer; the standalone one is for
-production and is skipped by the client bundle under
-`import.meta.env.PROD`. See `inertia-ssr` below.
+If `bootstrap/ssr/ssr.js` exists, `lemmego dev` starts it on
+`127.0.0.1:$INERTIA_SSR_PORT` and points the Go app at it. The default port is
+`13714`. Set a different `INERTIA_SSR_PORT` in each project's `.env` to run
+multiple Lemmego projects side by side. The generated SSR entry reads the
+port when it starts, so changing only the port does not require rebuilding
+the bundle. The `inertia-ssr check` command uses
+the same configured port; `--port` can still override it. Without the bundle,
+dev uses the Vite SSR endpoint. Set
+`INERTIA_SSR=false` to disable SSR and skip starting the standalone renderer.
 
 ## `lemmego build` — build assets for a deploy
 
@@ -294,12 +297,10 @@ that matters most — proving a renderer produces documents needs a props-free
 page to ask for, which is the application's to supply. `lemmego/inertia`'s
 `WithSSRProbeComponent` is where that lives.
 
-`start` takes no `--port` or `--host`, because `@inertiajs/core`'s server
-reads neither: its port is fixed when the bundle is built, by the Vite
-plugin's `inertia({ ssr: { port } })` option. `start` therefore prints a PID
-and no address, since it does not choose one and cannot read the one the
-bundle baked in. `check` is what answers which address is actually serving,
-and defaults to `127.0.0.1:13714`.
+`start` takes no `--port` or `--host`; the generated SSR entry reads
+`INERTIA_SSR_PORT` at startup. It prints a PID and no address. `check` is what
+answers which address is actually serving, and defaults to
+`127.0.0.1:$INERTIA_SSR_PORT` (13714 unless configured).
 
 ## `lemmego cache-clean` — drop the scaffold cache
 

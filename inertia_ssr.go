@@ -123,6 +123,17 @@ var inertiaSSRStopCmd = &cobra.Command{
 var inertiaSSRCheckCmd = &cobra.Command{
 	Use:   "check",
 	Short: "Check that the Inertia SSR server can actually render",
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		if cmd.Flags().Changed("port") {
+			return nil
+		}
+		port, err := standaloneRendererPort()
+		if err != nil {
+			return err
+		}
+		ssrPort = port
+		return nil
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		// The process being alive is not the question. A Node process
 		// listening with a broken module graph passes a liveness check and

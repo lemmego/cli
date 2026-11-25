@@ -147,9 +147,14 @@ REDIS_PASSWORD=
 # page without a renderer in the way; set it to true to check that a page
 # really does render on the server before shipping it.
 #
-# In development the renderer is the Vite dev server, so `lemmego dev` starts
-# nothing extra. In production `lemmego inertia-ssr start` runs the built
-# bundle.
+# In development, `lemmego dev` uses this port for the standalone renderer
+# when `bootstrap/ssr/ssr.js` exists. Projects can use different ports to run
+# side by side; the default is 13714. The renderer reads this when it starts,
+# so changing only the port does not require rebuilding the bundle.
+INERTIA_SSR_PORT=13714
+
+# Set false to skip server-side rendering in the application. The dev command
+# will also skip starting the standalone renderer.
 INERTIA_SSR=
 {{- end}}
 {{- if .HasModule "mail"}}
