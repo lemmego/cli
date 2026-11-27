@@ -61,6 +61,7 @@ func registerCommands() {
 	mcpInstallCmd.Flags().BoolVar(&mcpNoGuides, "no-guidelines", false, "Do not write the guideline block")
 
 	genCmd.AddCommand(handlerCmd)
+	genCmd.AddCommand(invokeHandlerCmd)
 	genCmd.AddCommand(migrationCmd)
 	genCmd.AddCommand(modelCmd)
 	genCmd.AddCommand(inputCmd)

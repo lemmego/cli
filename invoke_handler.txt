@@ -1,0 +1,7 @@
+package {{.PackageName}}
+
+import "github.com/lemmego/api/app"
+
+func {{.Name | toCamel}}InvokeHandler(ctx app.Context) error {
+	return nil
+}

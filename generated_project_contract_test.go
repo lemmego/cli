@@ -61,6 +61,9 @@ func TestGeneratedProjectsHaveValidGoStructure(t *testing.T) {
 			root := scaffoldContractProject(t, tt.cfg)
 			assertGeneratedGoFiles(t, root)
 			assertGeneratedModule(t, root, tt.cfg.ModuleName)
+			if _, err := os.Stat(filepath.Join(root, "internal", "services", "doc.go")); err != nil {
+				t.Fatalf("generated project is missing internal/services: %v", err)
+			}
 		})
 	}
 }

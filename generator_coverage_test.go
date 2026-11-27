@@ -59,6 +59,12 @@ func TestGeneratorsWriteConfiguredPaths(t *testing.T) {
 	if got := assertGoSource(t, "generated/handlers/user_handlers.go"); !strings.Contains(got, "UserIndexHandler") || !strings.Contains(got, "handler append") {
 		t.Fatalf("handler output missing expected content: %s", got)
 	}
+	if err := NewInvokeHandlerGenerator(&InvokeHandlerConfig{Name: "post_export"}).Generate(); err != nil {
+		t.Fatal(err)
+	}
+	if got := assertGoSource(t, "generated/handlers/post_export_handler.go"); !strings.Contains(got, "PostExportInvokeHandler") || strings.Count(got, "func ") != 1 {
+		t.Fatalf("invokable handler must contain one InvokeHandler: %s", got)
+	}
 
 	if err := NewModelGenerator(&ModelConfig{Name: "user", Fields: []*ModelField{
 		{Name: "id", Type: "uint64", Primary: true},
@@ -180,6 +186,9 @@ func TestGeneratorCommandsUseNonInteractiveArguments(t *testing.T) {
 	flavor = "react"
 
 	handlerCmd.Run(handlerCmd, []string{"post"})
+	if err := invokeHandlerCmd.RunE(invokeHandlerCmd, []string{"post_export"}); err != nil {
+		t.Fatal(err)
+	}
 	modelCmd.Run(modelCmd, []string{"post"})
 	inputCmd.Run(inputCmd, []string{"post"})
 	migrationCmd.Run(migrationCmd, []string{"posts"})
@@ -198,6 +207,7 @@ func TestGeneratorCommandsUseNonInteractiveArguments(t *testing.T) {
 
 	for _, pattern := range []string{
 		"internal/handlers/post_handlers.go",
+		"internal/handlers/post_export_handler.go",
 		"internal/models/post.go",
 		"internal/inputs/post_input.go",
 		"internal/migrations/*.go",

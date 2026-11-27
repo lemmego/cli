@@ -7,8 +7,8 @@ require (
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/iancoleman/strcase v0.3.0
 	github.com/joho/godotenv v1.5.1
-	github.com/lemmego/fsys v0.2.1
-	github.com/lemmego/mcp v0.6.0
+	github.com/lemmego/fsys v0.2.2
+	github.com/lemmego/mcp v0.7.0
 	github.com/spf13/cobra v1.8.1
 	golang.org/x/mod v0.42.0
 	golang.org/x/text v0.44.0
